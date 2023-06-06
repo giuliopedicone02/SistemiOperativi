@@ -2,11 +2,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define exit_with_sys_err(s)
-{
-    perror((s));
-    exit(EXIT_FAILURE);
-}
+#define exit_with_sys_err(s) \
+    {                        \
+        perror((s));         \
+        exit(EXIT_FAILURE);  \
+    }
 
 void my_exit1(void) { printf("Primo handler di uscita attivato!\n"); }
 void my_exit2(void) { printf("Secondo handler di uscita attivato!\n"); }
