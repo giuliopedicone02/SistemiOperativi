@@ -7,12 +7,11 @@
 Repository creata a scopo didattico per essere utilizzata come backup dei file creati a lezione.
 
 * **Cartella Lezioni**: Comprende gli appunti presi durante le lezioni sugli argomenti del corso.
-* **Cartella Tutorato**: Comprende gli appunti presi durante il tutorato tenuto dal [Prof. Carnemolla Davide](https://github.com/Herbrant).
+* **Cartella Tutorato**: Comprende gli appunti presi durante il tutorato tenuto dal [Prof. Carnemolla Davide](https://github.com/Herbrant/Tutorato-Sistemi-Operativi-2023).
 
 ## Authors
 
 - [@giuliopedicone02](https://www.github.com/giuliopedicone02)
-
 
 ## Feedback
 
