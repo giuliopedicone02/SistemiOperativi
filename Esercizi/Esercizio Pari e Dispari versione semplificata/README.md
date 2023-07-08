@@ -1,4 +1,4 @@
-# Alpha Stats (Versione Semplificata)
+# Pari Dispari (Versione Semplificata)
 
 Creare un programma **pari-dispari.c** in linguaggio C che accetti invocazioni sulla riga di comando del tipo
 
