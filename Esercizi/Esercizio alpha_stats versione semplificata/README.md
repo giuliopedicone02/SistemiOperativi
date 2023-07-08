@@ -17,15 +17,15 @@ Per coordinarsi, i thread dovranno usare un certo numero di semafori (minimo a s
 
 Il thread **Controllore**, dopo le operazioni preliminari sopra indicate, genererà una lettera causale per poi depositarla in **c** ed attivare, rispettivamente, il thread **AL** o **MZ** a secondo dell'intervallo di competenza. 
 
-Il thread **AL** (o **MZ**) una volta attivato provvederà ad aggiornare il contatore corrispondente alla lettera ricevuta presente nell'array **stats**.
+Il thread **AL** (o **MZ**) una volta attivato provvederà ad aggiornare il contatore corrispondente alla lettera ricevuta presente nell'array **alf**.
 
-Dopo che tutte le lettere generate saranno state "analizzate" e le statistiche aggiornate, allora il thread **Controllore** provvederà a stampare a video le statistiche presenti all'interno di **stats** e tutti i thread termineranno spontaneamente.
+Dopo che tutte le lettere generate saranno state "analizzate" e le statistiche aggiornate, allora il thread **Controllore** provvederà a stampare a video le statistiche presenti all'interno di **alf** e tutti i thread termineranno spontaneamente.
 
 Tutte le strutture dati utilizzate dovranno essere ripulite correttamente all'uscita.
 
 ## Esempio di esecuzione
 ```bash
-gcc alpha_text.c -o alpha-stats -pthread
+gcc alpha-stats.c -o alpha-stats -pthread
 ./alpha-stats 5000
 
 [C] Ho generato la lettera: l
