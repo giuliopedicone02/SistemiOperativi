@@ -1,4 +1,4 @@
-# Pari Dispari (Versione Semplificata)
+# Pari Dispari
 
 Creare un programma **pari-dispari.c** in linguaggio C che accetti invocazioni sulla riga di comando del tipo
 
