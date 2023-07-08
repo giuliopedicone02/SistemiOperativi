@@ -6,7 +6,7 @@
 
 Repository creata a scopo didattico per essere utilizzata come backup dei file creati a lezione.
 
-* **Cartella Esercizi**: Comprende alcuni esercizi svolti insieme al collega [Vincenzo](https://github.com/VincenzoVillanova/), inventati e non, di laboratorio. (Soluzioni personali, potrebbero non essere corrette e presentare errori)
+* **Cartella Esercizi**: Comprende alcuni esercizi di laboratorio, inventati e non, svolti insieme al collega [Vincenzo](https://github.com/VincenzoVillanova/) (Soluzioni personali, potrebbero non essere corrette e presentare errori)
 * **Cartella Lezioni**: Comprende gli appunti presi durante le lezioni sugli argomenti del corso.
 * **Cartella Tutorato**: Comprende gli appunti presi durante il tutorato tenuto dal [Prof. Carnemolla Davide](https://github.com/Herbrant/Tutorato-Sistemi-Operativi-2023).
 
