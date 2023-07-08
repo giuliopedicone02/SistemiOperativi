@@ -64,9 +64,27 @@ void controllore(void *arg)
             exit_with_err("sem_wait", err);
         }
 
-        td->cont->numero = rand() % 100 + 1;
         contatore++;
 
+        if (contatore > td->numerov)
+        {
+            td->cont->done = 1;
+
+            if ((err = sem_post(&td->cont->sem[PARI])) != 0)
+            {
+                exit_with_err("sem_post", err);
+            }
+
+            if ((err = sem_post(&td->cont->sem[DISPARI])) != 0)
+            {
+                exit_with_err("sem_post", err);
+            }
+
+            printf("[C] I risultati sono P = %d, D = %d \n", td->cont->verifica[0], td->cont->verifica[1]);
+            break;
+        }
+
+        td->cont->numero = rand() % 100 + 1;
         printf("[C] Generato il numero: %d\n", td->cont->numero);
 
         if ((td->cont->numero % 2) == 0)
@@ -82,24 +100,6 @@ void controllore(void *arg)
             {
                 exit_with_err("sem_post", err);
             }
-        }
-
-        if (contatore == td->numerov)
-        {
-            td->cont->done = 1;
-            i
-                f((err = sem_post(&td->cont->sem[PARI])) != 0)
-            {
-                exit_with_err("sem_post", err);
-            }
-
-            if ((err = sem_post(&td->cont->sem[DISPARI])) != 0)
-            {
-                exit_with_err("sem_post", err);
-            }
-
-            printf("[C] I risultati sono P = %d, D = %d \n", td->cont->verifica[0], td->cont->verifica[1]);
-            break;
         }
     }
     pthread_exit(NULL);

@@ -64,27 +64,9 @@ void *controllore(void *arg)
             exit_with_err("sem_wait", err);
         }
 
-        td->cont->c = rand() % (122 - 97 + 1) + 97;
         contatore++;
 
-        printf("[C] Ho generato la lettera: %c\n", td->cont->c);
-
-        if (td->cont->c < 'm')
-        {
-            if ((err = sem_post(&td->cont->sem[AL])) != 0)
-            {
-                exit_with_err("sem_post", err);
-            }
-        }
-        else
-        {
-            if ((err = sem_post(&td->cont->sem[MZ])) != 0)
-            {
-                exit_with_err("sem_post", err);
-            }
-        }
-
-        if (contatore == td->numerov)
+        if (contatore > td->numerov)
         {
             td->cont->done = 1;
             if ((err = sem_post(&td->cont->sem[AL])) != 0)
@@ -110,6 +92,24 @@ void *controllore(void *arg)
 
             printf("\n");
             break;
+        }
+
+        td->cont->c = rand() % (122 - 97 + 1) + 97;
+        printf("[C] Ho generato la lettera: %c\n", td->cont->c);
+
+        if (td->cont->c < 'm')
+        {
+            if ((err = sem_post(&td->cont->sem[AL])) != 0)
+            {
+                exit_with_err("sem_post", err);
+            }
+        }
+        else
+        {
+            if ((err = sem_post(&td->cont->sem[MZ])) != 0)
+            {
+                exit_with_err("sem_post", err);
+            }
         }
     }
 
