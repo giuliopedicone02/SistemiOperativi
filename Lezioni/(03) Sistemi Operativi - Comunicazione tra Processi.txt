@@ -1,0 +1,461 @@
+--- Comunicazione fra Processi ---
+
+Spesso i processi hanno bisogno di comunicare tra loro.
+Questa comunicazione tra processi prende il nome di InterProcess Communication (IPC)
+
+Questioni da considerare:
+
+1) Come un processo può scambiare informazioni?
+2) Essere sicuri sul fatto che due processi non si mettano l'uno nella strada dell'altro
+3) Mettere in sequenza i processi in modo adeguato
+
+--- Corse Critiche ---
+
+Situazione nella quale due o più processi leggono o scrivono su dati o risorse condivise.
+
+Sezione critica: Area di programma in cui si accede ad una sezione condivisa.
+
+Soluzione: Mutua esclusione
+
+--- Mutua Esclusione ---
+
+Se un processo sta usando una variabile o un file condiviso, gli altri processi saranno impossibilitati a fare la stessa cosa.
+
+Per avere una buona soluzione, dobbiamo soddisfare quattro condizioni:
+
+1. Due processi non devono trovarsi mai contemporanemanete all'interno delle sezioni critiche
+2. Non si deve fare alcuna ipotesi sulla velocità e sul numero delle CPU
+3. Nessun processo in esecuzione fuori dalla sua sezione critica può bloccare altri processi
+4. Nessun processo deve aspettare indefinitamente per poter entrare nella sua sezione critica
+
+--- Come realizzare la mutua esclusione ---
+
+1) Disabilitare gli Interrupt
+Soluzione non appropriata, si rischia il blocco del sistema
+
+2) Variabili di lock
+Variabile condivisa con valore iniziale 0.
+Quando un processo vuole entrare nella sua regione critica, controlla prima la variabile di lock:
+
+- Vale 0: Il processo la mette a 1 ed entra nella sua regione critica
+- Vale 1: Il processo attende che divenga 0.
+
+Problema:
+Il processo A legge la variabile di lock a 0 e tenta di metterla a 1, prima che ciò accada il processo B va in esecuzione e setta la variabile di lock a 1.
+Quando A tornerà in esecuzione, imposterà a sua volta la variabile di lock ad 1 ed i due processi saranno contemporaneamente nelle loro sezioni critiche.
+
+3) Alternanza stretta
+
+int N = 2
+int turn = 0
+function enter_region(int process)
+	while (turn!= process) 
+		do nothing
+
+function leave_region(int process)
+	turn= 1 –process
+
+La variabile intera turno tiene traccia del processo al quale tocca entrare nella sezione critica.
+Inizialmente, il processo 0 legge "turno", lo trova a 0 ed entra nella propria regione.
+Il processo 1 legge turno, lo trova a 0 ed entra in un ciclo testando continuamente il valore di turno.
+
+Il testare continuamente una variabile viene detto attesa attiva (o busy waiting).
+Un lock che usa l'attesa attiva è detto spin lock.
+
+4) Soluzione di Peterson
+
+int N = 2
+int turn = 0
+int interested[N]
+
+function enter_region(int process)
+	other= 1 –process
+	interested[process] = true
+	turn = process
+	while(interested[other] = true and turn = process)
+		 do nothing
+
+function leave_region(int process)
+	interested[process] = false
+
+Inizialmente nessun processo è nella sezione critica.
+Il processo 0 chiama enter_region(), indicando il suo interesse impostando il proprio elemento nel vettore e settando turn a 0.
+Il processo 1 chiama enter_region(), restando in attesa fintanto che interested[0] diventi FALSE, evento che si verifica quando il processo 0 richiama leave_region().
+
+Anche questo algoritmo fa uso del busy waiting ed inoltre può avere problemi sui moderni multiprocessori a causa del riordino degli accessi alla memoria centrale.
+
+--- Istruzioni TSL ed XCHG ---
+
+TSL: Test And Lock
+XCHG: eXCHanGe disponibile in tutte le CPU x86
+
+Istruzione: TSL RX, LOCK
+
+Mette il contenuto della parola di memoria lock all'interno del registro RX.
+La CPU che esegue TSL blocca i bus di memoria per impedire alle altre CPU du accedere alla memoria finchè non ha finito.
+
+enter_region:
+TSL REGISTER,LOCK
+CMP REGISTER,#0
+JNE enter_region
+RET
+
+leave_region:
+MOVE LOCK,#0
+RET
+
+La prima istruzione copia il valore di lock in un registro.
+La seconda istruzione confronta il valore del registro con 0.
+La terza istruzione (JNE = Jump Not Equal) viene esegita quando lock non è uguale a 0 saltando all'inizio e controllando nuovamente il valore.
+Se invece lock è 0 (Il processo termina ed esce dalla sua sezione critica) la procedura termina (RET = Return)
+
+Per uscire dall'area critica il processo richiama leave_region() che si occupa semplicemente di settare lock a 0 
+
+Siamo ancora in un caso di busy waiting.
+
+enter_region:
+MOVE REGISTER, #1
+XCHG REGISTER, LOCK
+CMP REGISTER, #0
+JNE enter_region
+RET
+
+leave_region:
+MOVE LOCK, #0
+RET
+
+--- Problema dell'inversione delle priorità  ---
+
+Tutte le soluzioni viste fino ad ora fanno spin lock (lock che usa l'attesa attiva).
+
+Consideriamo un calcolatore con due processi:
+- H ad alta priorità
+- L a bassa priorità
+
+H viene mandato in esecuzione non appena è in stato di ready.
+Ipotizziamo che L si trova nella sua regione critica ed H sia in stato di ready.
+
+H comincia quindi la sua attesa attiva (busy waiting), ma poichè L non viene mai scelto quando H è in esecuzione, L non ha mai la possibilità di lasciare la sua sezione critica, così H cicla all'infinito.
+Questa situazione prende il nome di problema dell'inversione delle priorità (priority inversion problem).
+
+--- Sleep e Wakeup ---
+
+Sono due primitive di comunicazione tra processi che li bloccano quando non è loro permesso entrare nelle loro sezioni critiche.
+
+Sleep: Chiamata di sistema che provoca blocco del sistema chiamante, viene sospeso finchè un altro processo non lo risveglia.
+Wakeup: Prende un parametro che rappresenta il processo che deve essere risvegliato.
+
+--- Il problema del produttore - consumatore ---
+
+Il problema del produttore - consumatore conosciuto anche come il problema del buffer a capacità limitata viene rappresentato come di seguito riportato:
+
+Due processi condividono un unico buffer di dimensioni fisse: uno di loro deposita informazioni sul buffer, l'altro le preleva.
+
+function producer()
+	while (true) do
+		item = produce_item()
+		if (count = N)
+			sleep()
+		insert_item(item)
+		count = count + 1
+		if (count = 1)
+			wakeup(consumer)
+
+function consumer()
+	while (true) do
+		if (count = 0)
+			sleep()
+		item = remove_item()
+		count = count - 1
+		if (count = N-1)
+			consume_item(item)
+
+Questa soluzione presenta un problema, ovvero la presenza di un bit di attesa della sveglia (wakeup waiting bit).
+Quando viene spedita una sveglia ad un processo sveglio, questo bit viene messo ad 1, quando il processo vorrà sospendersi, se il bit della sveglia è ad 1 verrà messo a 0 ma il processo non si sospenderà.
+
+La soluzione su tre o più processi non è così immediata, il problema rimane e verrà risolto solo nel 1965 con i semafori.
+
+--- I semafori ---
+
+Nel 1965 E. Dijkstra suggerì di usare una variabile intera S per contare il numero di sveglie.
+Questa variabile S prende il nome di semaforo che può avere come valore 0 o un numero positivo se una o più sveglie sono già pervenute.
+
+Dijkstra propose due operazioni: down ed up (generalizzazioni di sleep e wakeup)
+
+Down: Controlla che il valore di S sia maggiore di 0 e ne decrementa il valore
+Up: Incrementa il valore del semaforo su cui viene invocata.
+
+Se S è uguale a 0 il processo viene sospeso senza completare l'operazione di down.
+
+Down ed Up sono operazioni atomiche ovvero vengono eseguite senza interruzioni.
+
+--- Il problema del produttore - consumatore con i semafori ---
+
+Vengono utilizzati 3 semafori: mutex, empty e full.
+
+mutex: Controlla l'accesso alla regione critica
+empty: Conta le posizioni vuote nel buffer
+full: Conta le posizioni piene nel buffer
+
+Empty e full sono due semafori utili per la sincronizzazione, garantiscono che certe sequenze di eventi si verifichino o meno in un certo ordine.
+Questa soluzione non fa uso di busy waiting, ma viene usata una lista di processi bloccati.
+
+int N = 100
+semaphore mutex = 1
+semaphore empty = N
+semaphore full = 0
+
+function producer()
+	while (true) do
+		item = produce_item()
+		down(empty)
+		down(mutex)
+		insert_item(item)
+		up(mutex)
+		up(full)
+
+function consumer()
+	while (true) do
+		down(full)
+		down(mutex)
+		item = remove_item()
+		up(mutex)
+		up(empty)
+		consume_item(item)
+
+L'ordine delle operazioni sui semafori è fondamentale, i processi potrebbero rimanere bloccati per sempre (Deadlock - Stallo)
+
+--- Mutex ---
+
+I Mutex sono dei semafori semplificati.
+Sono variabili booleane che possono essere in due stati:
+
+- Locked (0)
+- Unlocked (1)
+
+Con i mutex vengono usate due procedure:
+Quando un thread deve accedere ad una sezione critica richiama mutex_lock.
+Se il mutex è già bloccato richiama mutex_unlock.
+
+mutex_lock e mutex_unlock sono simili ad enter_region e leave_region.
+
+mutex_lock:
+	TSL Register, Mutex
+	CMP Register, #0
+	JZE ok			| JZE = Se Mutex è 0, vai alla label 'ok' e termina
+	CALL thread_yield	| Schedula un altro Thread
+	JMP mutex_lock
+ok: RET
+
+mutex_unlock:
+	MOVE Mutex, #0
+	RET
+
+L'istruzione thread_yield si occupa di lasciare la CPU ad un altro thread, questo comporta che non c'è attesa attiva (busy waiting).
+
+Dal momento che thread_yield è solo una chiamata allo schedulatore è molto veloce perchè non richiedono chiamate di sistema, in questo modo i thread di livello utente possono sincronizzarsi nello spazio utente.
+
+--- Futex ---
+
+Risolvono il problema dei mutex degli sprechi di CPU durante lo spin lock.
+Futex = Fast User Space Mutex si compone di due parti:
+
+- Servizio kernel
+	Coda di Thread bloccati
+- Libreria utente
+	- Variabile di lock
+	- Richiamo kernel solo in caso di bloccaggio
+
+--- Monitor ---
+
+Per rendere più semplice la scrittura di programmi corretti, Hoare e Brinch Hanssen proposero una primitiva di livello più alto chiamata Monitor.
+
+Un monitor è una collezione di procedure, variabili e strutture dati raggruppate insieme in un tipo speciale di modulo o package.
+
+I processi possono chiamare le procedure di un monitor ogni volta che vogliono ma non possono accedere direttamente alle strutture dati interne (private).
+
+Le operazioni public sono le sole operazioni che possono accedere alle variabili locali.
+Le variabili locali sono accessibili solo all'interno del monitor, il loro accesso avviene in modo mutuamente esclusivo.
+
+I Monitor possiedono un'importante proprietà che li rende utili per ottenere la mutua esclusione:
+Ad ogni istante, un solo processo può essere attivo su un monitor.
+
+L'organizzazione della mutua esclusione spetta al compilatore.
+Trasformando tutte le sezioni critiche in procedure dei monitor, due processi qualunque non potranno mai essere nella stessa sezione critica.
+
+Come blocchiamo i processi per non farli entrare nelle loro sezioni critiche?
+La soluzione sta nell'introduzione delle variabili di tipo condizione:
+
+- Wait(cond): Blocca il processo introducendolo nella coda, liberando il monitor.
+- Signal(cond): Rende attivo un processo in attesa nella coda.
+
+Nel momento in cui richiamiamo signal ci ritroviamo però con due processi attivi sul monitor, e come abbiamo detto precedentemente ciò non può avvenire.
+Esistono 3 strategie differenti:
+
+- Hoare: Eseguire il processo svegliato
+- Brinch-Hansen: Signal come ultima istruzione di una procedura monitor
+- Continuare l'esecuzione del segnalatore
+
+La signal può avere diverse semantiche:
+- Monitor Hoare: signal & wait
+- Monitor Mesa (Java): signal & continue
+- Compromesso (Pascal): signal & return
+
+Svantaggio:
+Molti linguaggi di programmazione non hanno i monitor (C/C++ è uno di questi), i semafori sono più semplici da implementare.
+
+--- Produttore - Consumatore con i monitor ---
+
+monitor pc_monitor
+	condition full, empty
+	integer count = 0
+
+	function insert(item)
+		if (count = N)
+			wait(full)
+		insert_item(item)
+		count = count + 1
+		if (count = 1)
+			signal(empty)
+	
+	function remove()
+		if (count = 0)
+			wait(empty)
+		remove = remove_item()
+		count = count -1
+		if (count = N-1)
+			signal(full)
+
+function producer()
+	while(true)
+		item = produce_item()
+		pc_monitor.insert(item)
+
+
+function consumer()
+	while(true)
+		item = pc_monitor.remove()
+		consume_item(item)
+
+Il produttore ha un ciclo infinito che genera dati e li mette in un buffer comune.
+Il consumatore ha un ciclo infinito che preleva i dati dal buffer comune.
+
+La variabile count tiene traccia di quanti elementi sono nel buffer (assume valori da 0 a N-1).
+
+--- Scambio dei messaggi tra processi (Message passing) ---
+
+Questo metodo di comunicazione usa due primitive:
+
+- send(destinazione, &messaggio): Spedisce un messaggio ad una determinata destinazione
+- receive(sorgente, &messaggio): Riceve un messaggio da una determinata sorgente (oppure da ANY, da qualunque sorgente)
+
+Comunicazione asincrona: Il processo mittente continua la sua esecuzione immediatamente dopo che il messaggio è stato inviato
+Comunicazione sincrona: Il primo dei due processi comunicanti che esegue l'invio si sospende in attesa che l'altro sia pronto ad eseguire l'operazione opposta.
+
+--- Problematiche dello scambio dei messaggi ---
+
+Per prevenire la perdita dei messaggi, il mittente ed il destinatario possono concordare che non appena un messaggio viene ricevuto, il destinatario spedisce indietro uno speciale messaggio detto acknowledgment.
+Se il mittente non ha ricevuto l'ack entro un determinato intervallo di tempo, rispedisce il messaggio.
+
+--- Metodi di indirizzamento dei messaggi ---
+
+- Diretto: Assegna ad ogni processo un indirizzo unico
+- Mailbox: Struttura dati che serve a bufferizzare un certo numero di messaggi (N). La send può essere bloccante: Quando un processo cerca di spedire un messaggio ad una mailbox piena, viene sospeso finchè non viene tolto un messaggio dalla mailbox. 
+- Rendezvous: Eliminazione della bufferizzazione, è più facile da implementare ma è meno flessibile perchè mittente e destinatario sono forzati ad andare in esecuzione a passi sincronizzati.
+
+--- Produttore - Consumatore con scambio di messaggi ---
+
+Se il produttore invia messaggi troppo velocemente, saturerà il buffer del consumatore.
+Dovrà quindi sospendersi o rallentare il flusso.
+
+Il consumatore inizia spedendo N messaggi vuoti al produttore.
+Non appena il produttore ha un elemento da dare al consumatore, prende un messaggio vuoto e ne spedisce indietro uno pieno.
+
+N = 100 //Indica il numero di slot del buffer disponibili
+
+void producer()
+{
+	int item;
+	message m;
+
+	while(true)
+	{
+		item = produce_item()	//Genera un elemento da inserire nel buffer
+		receive(consumer, &m)	//Aspetta un messaggio vuoto
+		build_message(&m, item)	//Costruisce il messaggio da inviare
+		send(consumer, &m)	//Invia il messaggio al consumatore
+	}	
+}
+
+void consumer()
+{
+	int item, i;
+	message m;
+
+	for(i=0; i<N; i++)
+		send(producer, &m)	//Invia N messagi vuoti
+
+	while(true)
+	{
+		receive(producer, &m)	//Riceve il messaggio che contiene 'item'
+		item = extract_item(&m)	//Estrae 'item' dal messaggio
+		send(producer, &m)	//Invia al produttore un messaggio vuoto di risposta (ack)
+		consume_item(item)	//Fa qualcosa con 'item'
+	}	
+}
+
+--- Problema dei 5 filosofi ---
+
+Cinque filosofi sono seduti attorno ad un tavolo e ciascun filosofo ha un piatto con due forchette accanto.
+Per mangiare deve avere entrambe le forchette: destra & sinistra.
+
+I filosofi alternano periodi in cui pensano ed altri in cui mangiano.
+Quando un filosofo vuole mangiare cerca di prendere possesso di entrambe le forchette, se riesce nel suo intento mangia per un pò e succesivamente le rilascia e continua a pensare.
+
+Starvation: Caso in cui tutti i programmi vanno in esecuzione per un tempo indefinito senza compiere alcun progresso.
+
+int N = 5 //Numero di filosofi
+
+function philosopher(int i) 	// i = filosofo [0,4]
+	think()			// Il filosofo pensa
+	take_fork(i)		// Prende la forchetta a sinistra
+	take_fork((i+1) mod n)	// Prende la forchetta destra
+	eat()			// Mangia
+	put_fork(i)		// Rilascia la forchetta sinistra
+	put_fork((i+1) mod n)	// Rilascia la forchettta destra
+
+La soluzione sopra produrrà un deadlock (blocco) se tutti i filosofi prendono la forchetta sinistra allo stesso istante nessuno di loro potrà prendere la forchetta di destra.
+
+--- Il problema dei lettori e scrittori ---
+
+Problema che modella l'accesso ad una base di dati.
+Se un processo sta scrivendo la base di dati nessun altro processo può accedervi.
+
+Problema: Lo scrittore potrebbe attendere per un tempo indefinito.
+Finchè c'è un regolare arrivo di lettori, questi avranno accesso alla base di dati, mentre lo scrittore rimarrà sospeso finchè non ci sono più lettori. Se un lettore arriva ogni 2 secondi e ogni lettore impiega 5 secondi a fare il suo lavoro, lo scrittore non avrà mai accesso alla base di dati.
+
+semaphore mutex = 1	//Controlla gli accessi ad rc
+semaphore db = 1	//Controlla gli accessi alla base di dati
+int rc = 0		//Numero di processi che leggono o che vogliono scrivere
+
+void reader()
+	while (true)
+		down(mutex)		//Ottieni accesso esclusivo ad 'rc'
+		rc = rc + 1		//Incrementa il numero di lettori
+		if (rc = 1)		
+			down(db)	
+		up(mutex)		//Rilascia accesso esclusivo ad 'rc'		
+		read_database()		//Accede ai dati
+		down(mutex)		//Ottieni accesso esclusivo ad 'rc'
+		rc = rc - 1		//Decrementa il numero di lettori
+		if (rc = 0)		
+			up(db)
+		up(mutex)		//Rilascia accesso esclusivo ad 'rc'
+		use_data_read()		//Sezione non critica
+
+function writer()
+	while (true)
+		think_up_data()		//Sezione non critica
+		down(db)		//Ottieni l'accesso esclusivo
+		write_database()	//Aggiorna i dati
+		up(db)			//Rilascia l'accesso esclusivo

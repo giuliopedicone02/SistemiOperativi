@@ -1,0 +1,281 @@
+*** File System ***
+
+Formalmente, un file system è l'insieme dei tipi di dati astratti necessari per la memorizzazione (scrittura),
+l'organizzazione gerarchica, la manipolazione, la navigazione, l'accesso e la lettura dei dati.
+
+--- I file ---
+
+I file sono un meccanismo di astrazione dei dati.
+
+I file system per gestire i file utilizza dettagli come:
+- Nomenclatura: Quando un processo crea un file, tutti gli altri processi possono utilizzarlo facendo riferimento al nome.
+- Tipo di file: File regolare (può essere ASCII o binario) o file directory (gruppo di file)
+- Tipo di accesso: Maniera sequenziale o non ordinata (file ad accesso casuale)
+- Metadati ed attributi
+- Operazioni supportate sui file: scrittura, lettura ed esecuzione
+- Strutture dati globali o private (per processo)
+
+--- Struttura di un file system ---
+
+I file system sono memorizzati in dischi divisi in una o più partizioni.
+
+Il MBR (master Boot Record) è un settore dell'hard disk di un computer, che contiene la sequenza di comandi/istruzioni necessarie all'avvio (boot) del sistema operativo.
+
+Superblocco: Contiene tutti i parametri chiave relativi al file system ed informazioni circa i blocchi liberi.
+
+--- Implementazione dei file ---
+
+L’allocazione dello spazio sul disco per ogni file è eseguita dal file system. 
+Ne abbiamo di diversi tipi:
+
+- Allocazione contigua 
+Consiste nel memorizzare ogni file come un blocco contiguo di dati sul disco.
+	Vantaggi:
+	- Semplice da implementare
+	- Molto efficiente in lettura
+
+	Svantaggi:
+	- Frammentazione dovuta a creazioni e cancellazioni di file
+
+- Allocazione a liste concatenate
+Consiste nel memorizzare i file mantenendoli ognuno come una lista concatenata di blocchi.
+	Vantaggi:
+	- Risolve il problema della frammentazione
+	
+	Svantaggi:
+	- Accesso lento: per leggere il blocco x bisogna leggere tutti gli x-1 precedenti.
+	- Puntatori: Se si dovesse danneggiare un puntatore potrebbe esserci una perdita di dati.
+
+- Allocazione a liste concatenate su una FAT (File Allocation Table)
+Senza una FAT, l’assegnazione concatenata non è in grado di sostenere un efficiente accesso diretto, poiché i puntatori ai blocchi sono sparsi, per tutto il disco e si devono recuperare in ordine.
+
+La FAT permette di rendere disponibile l'intero blocco per i dati, rendendo l'accesso diretto molto più facile.
+	Vantaggi:
+	- Risolve entrambi gli svantaggi dell'allocazione senza FAT
+	
+	Svantaggi:
+	- L'intera tabella deve essere caricata in memoria
+
+- Allocazione indicizzata
+Consiste nell'associare ad ogni file una piccola struttura dati chiamata i-node (index node)
+A partire dall'i-node è possibile trovare tutti i blocchi del file.
+
+	Vantaggi:
+	- L'i-node, a differenza della tabella, deve risidere in memoria solo quando il file è aperto
+	
+	Svantaggi:
+	- Ogni i-node può gestire solo un certo numero di indirizzi sul disco, se il file dovesse crescere di dimensioni si deve ricorrere alle strategie viste in precedenza.
+
+--- Implementazione delle directory ---
+
+Quando si apre un file, il sistema operativo usa il suo pathname per localizzarlo all'interno delle varie directory.
+
+Dove memorizziamo gli attributi di un file?
+Come attributi intendiamo il proprietario del file, data di creazione, ...
+
+- Memorizzarli all'interno della directory
+- Memorizzarli all'interno degli i-node, se utilizzati
+
+Entrambi questi metodi hanno uno svantaggio, se la directory dovessere essere molto lunga la ricerca lineare potrebbe essere molto lenta.
+
+Possiamo velocizzare questa operazione tramite l'ausilio delle tabelle hash e/o inserendo i risultati delle ricerche effettuate all'interno della cache (più veloce).
+
+--- Condivisione di un file ---
+
+Due o più utenti che vogliono condividere un file, possono farlo usando una FAT, quindi duplicando la lista con i riferimenti ai blocchi.
+In caso di apertura del file in scrittura append (a+), gli utenti potrebbero riscontrare problemi di sincronizzazione.
+
+Una soluzione più conveniente è offerta dai link (collegamenti) che si dividono in:
+
+- Soft link: Punta ad un file esistente. Dipende dal file originale: nel momento in cui viene cancellato il file sorgente, il collegamento non punterà più a nulla.
+- Hard link: Crea una "porta di accesso" al file, non occupa spazio sul disco ed ha un contatore di link.
+
+--- Gestione dei blocchi liberi ---
+
+Due metodi:
+
+- Bitmap
+- Liste concatenate
+
+*** Bitmap ***
+
+Ogni singolo bit rappresenta un blocco del disco: 
+se il blocco è allocato ad un file il bit è 0, se il blocco è libero il bit è 1.
+
+Svantaggio: Deve essere mantenuta interamente in memoria
+
+*** Lista concatenata ***
+
+Tale implementazione richiede più spazio e c’è una bassa efficienza nella ricerca, 
+ma si sfruttano i blocchi liberi e non c’è spreco di spazio.
+
+--- Controlli di consistenza ---
+
+Può succedere che per un crash di sistema, o per un errore di un’applicazione, i blocchi che descrivono lo stato di allocazione dei file
+contengano informazioni non corrette lasciando il file system in uno stato inconsistente.
+
+La consistenza del file system è verificata controllando che per ogni blocco ci sia il valore 1 in uno solo dei due array, 
+perché un blocco deve essere o libero oppure assegnato a un file.
+
+--- Journaling File System (JFS) ---
+
+Un JFS mantiene un journal (diario) dove vengono salvate le azioni che il file system deve ancora eseguire. 
+
+In caso di spegnimento improvviso, il file system consulta il journal per identificare le azioni non ancora eseguite e le esegue, 
+garantendo in questo modo la correttezza dei dati dei file e dei metadati.
+
+Vantaggio: Veloce ed affidabile
+
+Strategia del JFS:
+
+- Le operazioni sui meta-dati sono preliminarmente appuntate in un log che viene poi ripulito a posteriori 
+(subito dopo);
+- In caso di ripristino da crash si ripetono le operazioni in log.
+
+--- Cache del disco ---
+
+Per migliorare la prestazione dei dischi si fa spesso uso di una cache del disco o buffer cache.
+
+Il caching riduce il numero di operazioni necessarie per accedere ai dati memorizzati in un file.
+Migliora le prestazioni di sistema e delle attività di elaborazione dei file.
+
+La struttura di tale cache è basata sulle tabelle hash.
+
+--- Scheduling del disco ---
+
+Esistono vari algoritmi di scheduling del disco, che hanno come obiettivi massimizzare il numero di richieste 
+soddisfatte in una unità di tempo (throughput), e minizzare il tempo medio di accesso.
+
+Il SO può adottare varie politiche di selezione della prossima richiesta da mandare.
+Si può ottimizzare per:
+- Tempo di posizionamento (seek time)
+- Latenza di rotazione
+
+--- First Come First Served (FCFS) ---
+
+Le richieste vengono eseguite nell'ordine di arrivo.
+
+- Vantaggi: Semplice ed equo
+- Svantaggi: Inefficiente
+
+[Vedi esempio, slide 15]
+
+--- Shortest Seek Time First (SSTF) ---
+
+Sceglie la richiesta con seek time minore rispetto alla posizione corrente.
+
+- Vantaggi: Buone prestazioni, non ottimali
+- Svantaggi: Non equo (Starvation: Non si compie alcun progresso)
+
+[Vedi esempio, slide 16]
+
+--- Scheduliung per scansione (SCAN) ---
+
+Conosciuto anche con il nome di algoritmo dell'ascensore.
+
+L'algoritmo SCAN serve in una direzione e quando arriva al bordo del disco cambia direzione servendo i rimanenti elementi.
+
+- Vantaggi: Scansione uniforme, attesa massima per ogni richiesta
+- Svantaggi: "Tornare indietro" è un'operazione certe volte costosa, si può fare di meglio
+
+[Vedi esempio, slide 17]
+
+--- Scheduling per scansione circolare (C-SCAN) ---
+
+La testina segue le richieste in ordine, finché non arriva all'estremo del disco.
+Una volta arrivato all'estremo del disco torna all'inizio (senza servire richieste) e riparte.
+
+- Vantaggi: Tempo medio di attesa più basso ed uniforme
+
+[Vedi esempio, slide 18]
+
+--- Quale scegliere? ---
+
+Alto carico: Scansione circolare (C-SCAN)
+Basso carico: Scansione (SCAN) o Shortest Seek Time First (SSTF)
+
+--- Sistemi RAID ---
+
+Il RAID (redundant array of inexpensive disks) permette di raggruppare i diversi dischi rigidi collegati ad un computer 
+rendendoli utilizzabili, dalle applicazioni e dall'utente, come se fosse un unico volume di memorizzazione.
+
+Per aumentare le prestazioni bisogna sfruttare il parallelismo anche per l'I/O su disco: servono più dischi indipendenti e bisogna suddividere i dati su più dischi (striping). 
+
+--- RAID 0 (striping in round robin) ---
+
+Nel RAID 0 i dati vengono distribuiti su più dischi con la tecnica dello striping: i dati sono divisi equamente tra due o più dischi.
+
+Formalmente non è proprio una configurazione RAID poiché non usa nessuna memorizzazione ridondante dei dati.
+
+Le operazioni sono svolte in parallelo sui vari dischi;
+Il RAID 0 risulta indicato quando le esigenze di performance superano quelle dell’affidabilità.
+
+- Vantaggi: Tasso di trasferimento elevato grazie agli accessi contemporanei ai dischi
+- Svantaggi: Scarsa affidabilità, in caso di malfunzionamento di un disco la perdita di dati è sicura.
+
+[Vedi figura, slide 20]
+
+--- RAID 1 (mirroring) ---
+
+Nel RAID 1 viene creata una copia esatta di tutti i dati su due o più dischi. 
+Questa tecnica prende il nome di disk mirroring.
+
+Il RAID 1 porta notevoli miglioramenti nella lettura. 
+Le operazioni sono svolte in parallelo aumentando, così, le prestazioni in lettura: 
+- Durante una lettura, viene utilizzata la copia che può essere letta prima 
+- Possibilità di leggere da un disco mentre l’altro è occupato.
+
+- Vantaggi: Maggiore affidabilità di RAID 0, migliori prestazioni in lettura
+- Svantaggi: Overhead, ogni volta che si vuole aggiornare un dato devono essere aggiornate anche le sue copie
+
+[Vedi figura, slide 20]
+
+--- RAID 2 (bit striping) ---
+
+Nel RAID 2 viene utilizzata la tecnica del bit striping, 
+permette di memorizzare i codici per la correzione degli errori. 
+Si usa il codice di Hamming visto che esso è in grado di correggere errori su singoli bit e rilevare errori doppi.
+
+Una parte dei dischi viene usata per salvare i dati, mentre la restante parte viene usata per salvare solo le 
+informazioni per la correzione degli errori.
+
+- Vantaggi: Maggiore affidabilità di RAID 0 ed 1, migliori prestazioni in lettura è possibile leggere i dischi in parallelo
+- Svantaggi: Numero di dischi da utilizzare molto alto ($$$), serve sincronizzare i dischi
+
+[Vedi figura, slide 21]
+
+--- RAID 3 (bit di parità) ---
+
+Il RAID 3 non è altro che una semplificazione del RAID 2. 
+La differenza tra RAID 2 e RAID 3 è che in quest'ultimo viene utilizzato un solo disco per il salvataggio dei codici per la correzione. 
+Questo è possibile sostituendo il codice di Hamming con un nuovo metodo, il bit di parità.
+
+Permette di recuperare i dati ed ha la stessa affidabilità di RAID 2.
+
+- Vantaggi: Prestazioni e caratteristiche simili al RAID 2. Elevati tassi di trasferimento. Affidabilità molto alta.
+- Svantaggi: Possibilità di eseguire una sola operazione di I/O in ogni istante, serve sincronizzare i dischi.
+
+[Vedi figura, slide 21]
+
+--- RAID 4 ---
+
+Usa un disco extra per la memorizzazione dei bit di parità (XOR degli stripe).
+
+Differenza con il RAID 3: I dati vengono divisi in byte e non in blocchi.
+
+- Vantaggi: Più operazioni I/O alla volta, Alto tasso di trasferimento, Ottima affidabilità, NON necessita sincronizzazione
+- Svantaggi: Una sola scrittura sul disco per volta.
+
+[Vedi figura, slide 22]
+
+--- RAID 5 ---
+
+Il RAID 5 è analogo al RAID 4 fatta eccezione per il fatto che i codici di parità 
+sono distribuiti su tutti i dischi. Permette quindi la scrittura in parallelo se essa interessa un siingolo blocco.
+
+Sostituisce di fatto il RAID 4.
+
+- Vantaggi: Scritture e letture in parallelo, Alto tasso di trasferimento, Ottima affidabilità, NON necessita sincronizzazione
+- Svantaggi: Una sola operazione di I/O per volta se essa richiede più blocchi.
+
+[Vedi figura, slide 22]

@@ -1,0 +1,629 @@
+--- Gestione della Memoria ---
+
+La maggior parte dei PC ha una gerarchia di memoria così suddivisa:
+
+- Piccola quantità di cache molto veloce dispendiosa e volatile
+- RAM con velocità e costi nella media
+- Grandi quantità di dischi di memoria lenti ed economici.
+
+La parte di sistema operativo che gestisce la gerarchia di memoria si chiama gestore della memoria.
+Il suo compito è quello di tenere conto delle parti di memoria usate e di quelle inutilizzate.
+
+--- Sistemi di gestione della memoria ---
+
+*** Monoprogrammazione ***
+
+Permette di eseguire un solo programma alla volta.
+Non esiste alcun concetto di astrazione della memoria, i programmi accedono direttamente agli indirizzi fisici della memoria.
+
+Spesso utilizzata nei sistemi embedded.
+
+*** Multiprogrammazione ***
+
+Permette di eseguire uno o più programmi contemporanemanete.
+Questo comporta un incremento dell'utilizzo della CPU.
+
+Per realizzare la multiprogrammazione è sufficiente dividere la memoria in diverse partizioni.
+Dal momento che le partizioni sono fisse, tutto lo spazio di una partizione non utilizzato da un processo in esecuzione viene sprecato.
+
+La multiprogrammazione introduce due problemi essenziali: la rilocazione e la protezione.
+
+Per il primo problema esistono due approcci:
+
+- Rilocazione statica: Gli indirizzi vengono assegnati in fase di caricamento del programma.
+- Rilocazione dinamica: Gli indirzzi vengono assegnati in fase di compilazione del programma.
+
+Per il secondo problema, ovvero la protezione la soluzione sta nell'introduzione di due blocchi di memoria:
+
+- Lock
+- Key
+
+Contengono delle chiavi di protezione della memoria ed un Program Status Word con la chiave del processo in esecuzione.
+
+--- Spazio degli indirizzi ---
+
+É l'insieme di indirizzi o posizioni possibili nella memoria di un computer in cui i dati possono essere memorizzati o recuperati.
+Ogni processo ha un proprio spazio degli indirizzi 
+
+--- Rilocazione dinamica tramite registro base e registro limite  ---
+
+Soluzione alternativa ai problemi di rilocazione e protezione della memoria.
+
+Si basa su due registri speciali chiamati:
+
+- Registro base: Contiene l'indirizzo di partenza di una partizione di memoria
+- Registro limite: Contiene la lunghezza della partizione.
+
+Questi registri vanno aggiornati ad ogni context switch, ed è compito della MMU (Memory Management Unit) farlo, inoltre l'MMU utilizza questi due registri per controllare gli accessi in memoria.
+
+Lo svantaggio sta nel confronto e nella somma in termini di complessità computazionale.
+
+---
+
+Analizziamo adesso due tecniche di gestione del carico/scarico dei programmi tra RAM e disco:
+
+- Swapping: Carica interamente in RAM un processo, lo esegue e lo sposta nuovamente sul disco
+- Memoria Virtuale: Permette ai programmi di essere eseguiti anche se caricati solo parzialmente in RAM.
+
+--- Swapping ---
+
+Swapper: Scheduler che si occupa di caricare e scaricare programmi da CPU a disco e viceversa.
+
+Lo swapping crea molti buchi in memoria che è possibile combinare tramite una tecnica nota come compattazione della memoria (memory compaction), tuttavia non viene usata perchè dispendiosa in termini di CPU.
+
+Bisogna quindi capire quanta memoria allocare ad ogni processo, esistono due strategie:
+
+- Allocazione fissa: Ad ogni processo viene assegnata una locazione di memoria dalla dimensione fissa.
+- Allocazione dinamica: Se vicino all'area di memoria riservata ad un processo si trova un'area non allocata è possibile attribuirla al programma permettendogli di crescere.
+
+--- Gestione della memoria ---
+
+Quando la memoria viene assegnata dinamicamente il sistema operativo deve tenerne traccia.
+
+Esistono due modi:
+
+- Mappe di bit (bitmap)
+- Liste concatenate
+
+*** Bitmap ***
+
+La memoria viene suddivisa in unità di allocazione al quale viene associato un bit della mappa:
+
+- 0 se l'unità è libera
+- 1 se l'unità è occupata
+
+Il problema principale sta nel fatto che quando si decide di caricare in memoria un processo di k unità, il gestore della memoria deve esaminare la mappa di bit per trovare una sequenza di k bit a 0.
+Questa operazione è lenta perchè occorre controllare se la sequenza si trova a cavallo di due parole della bitmap.
+
+*** Liste concatenate ***
+
+Ogni segmento della lista concatenata è un processo (P - Process) oppure un buco fra due processi (H - Hole).
+
+Ciascun elemento nellal lista specifica:
+- Se si tratta di un buco (H) o un processo (P)
+- Indirizzo di partenza
+- Lunghezza
+- Puntatore al prossimo elemento
+
+[Vedi figura: slide 11]
+
+Quando la lista concatenata è ordinata per indirizzo si possomo utilizzare diversi algoritmi per allocare la memoria di un processo.
+
+- First fit (Primo posto sufficiente): L'MMU scorre la lista fin quando non trova un buco (H - Hole) abbastanza grande per poter essere allocato.
+	Vantaggio: Algoritmo veloce, esegue una ricerca corta
+	Svantaggio: Crea molta frammentazione interna
+- Next fit (Prossimo posto sufficiente): Lavora come il first fit, memorizzando l'ultimo hole adatto trovato. La prossima volta che viene chiamato effettua la ricerca da dove si era fermato.
+	Vantaggio: Nessuno
+	Svantaggio: Prestazioni leggermente peggiori del first fit
+- Best fit (Miglior posto sufficiente): Effettua la ricerca in tutta la lista scegliendo l'hole più piccolo sufficientemente grande per poter essere allocato.
+	Vantaggio: Frammentazione interna lieve o nulla.
+	Svantaggio: Algoritmo lento
+- Worst fit (Peggior posto sufficiente): Effettua la ricerca in tutta la lista scegliendo l'hole più grande disponibile.
+	Vantaggio: Nessuno
+	Svantaggio: Grande frammentazione interna.
+
+Se si mantengono due liste distinte una per i processi (P) ed una per i buchi di memoria (H) ordinate per dimensione allora best fit e first fit si equivalgono.
+
+- Quick fit: Si può usare solo su liste separate, consiste nel trovare un hole con dimensione esatta a quella richiesta
+	Vantaggio: nessuna frammentazione
+	Svantaggio: Dispendioso trovare i vicini di un processo per vedere se è possibile fondere i blocchi.
+
+--- Memoria virtuale ---
+
+Con l'evoluzione, i programmi avevano bisogno di più memoria di quella disponibile in RAM.
+Nasce quindi il concetto di overlay, ovvero una porzione di programma.
+
+Questo consiste di avere più overlay in memoria alla volta.
+Il compito di dividere il programma in più parti (overlay) è assegnato al programmatore.
+
+L'idea di memoria virtuale è quella di poter eccedere la dimensione disponibile in RAM espandendosi tramite altre memorie come lo stack.
+Questo tipo di allocazione si chiama non contigua in quanto si lavora su porzioni di memoria con indirizzi fisici non necessariamente consecutivi tra loro.
+
+--- Paginazione ---
+
+Tecnica adottata per la gestione dei sistemi con memoria virtuale.
+
+Gli indirizzi generati dal programma vengono detto indirizzi virtuali e formano lo spazio di indirizzamento virtuale.
+
+Il compito dell'MMU è quello di tradurre un indirizzo virtuale in indirizzo fisico.
+
+Lo spazio di indirizzamento virtuale viene diviso in unità chiamate pagine.
+Le corrispondenti unità di memoria vengono dette pagine fisiche (page frame).
+
+Pagine e page frame hanno la stessa dimensione ma il numero di pagine è superiore al numero di frame.
+
+[Vedi figura, slide 14]
+
+--- Come funziona la paginazione? ---
+
+Si supponga la seguente operazione:
+
+MOV REG, 0
+
+L'indirizzo 0 viene mandato all'MMU, esso cade nella pagina 0 (0-4k), lo traduce quindi nella page frame 2 (8k-12k).
+
+MOV REG, 8192
+
+L'indirizzo 8192 viene mandato all'MMU, esso cade nella pagina 3 (8K-12K), lo traduce quindi nella page frame 6 (24k-28k).
+
+Dal momento che abbiamo solo 8 page frame e 16 pagine virtuali nasce il problema che lo spazio di indirizzamento virtuale è più grande dello spazio disponibile in memoria fisica.
+
+Tutti i blocchi virtuali contrassegnati con una X, sono blocchi non mappati.
+Nell'hardware questa X si traduce in un bit presente/assente che indica se la pagina è mappata o meno.
+
+MOV REG, 32780
+
+L'indirizzo 32780 viene mandato all'MMU, esso cade nella pagina 8 (28k - 32k) traducendola l'MMU trova il bit di presenza a 0 (X) e genera una TRAP al sistema operativo facendogli notare che non è possibile mappare quell'indirizzo.
+
+Questa operazione prende il nome di page fault (Errore di pagina).
+
+In caso di page fault si procede come di seguito:
+
+Scostamento: 32780 - 32*1024 = 32780 - 32768 = 12 bit
+
+Supponiamo di voler utilizzare il frame di memoria fisica con indice 1 (4k - 8k).
+Per ottenere il nuovo indirizzo nella memoria fisica: 4*1024 + 12 = 4096 + 12 = 4108
+
+--- Tabella delle pagine ---
+
+Tabelle indicizzate tramite numero di pagina, contengono il numero della pagina fisica corrispondente alla pagina virtuale.
+Da un punto di vista matematico la tabella delle pagine è una funzione, con il numero di pagina virtuale come argomento ed il numero di pagina fisica come risultato.
+Il loro scopo è quello di mappare le pagine virtuali in pagine fisiche.
+
+[Vedi esempio, slide 16 e 17]
+
+Spazio di indirizzamento virtuale: 2^m = 2^16 = 65536
+Dimensione della pagina: 2^n = 2^12 = 4096
+
+Numero di pagine: 2^(m - n) = 2^(16 - 12) = 16
+
+Supponiamo di voler convertire l'indirizzo virtuale 8196 in un indirizzo fisico.
+
+8196 => 0010 0000 0000 0100
+
+Prendiamo i primi (m-n) bit significativi, questi indicano il numero della pagina da controllare nella tabella delle pagine.
+
+Nell'esempio 0010 si converte in decimale in 2.
+La pagina 2 ha il bit di presenza/assenza impostato ad 1, quindi osservando la tabella notiamo che i primi 3 bit del nuovo indirizzo saranno 110.
+
+A questo 110 accostiamo il nostro offset di 12 bit.
+Otteniamo quindi 110 0000 0000 0100 = 24580 ovvero il nuovo indirizzo fisico.
+
+--- Struttura degli elementi della tabella delle pagine ---
+
+Dimensione tipica: 32 bit
+
+Contiene i seguenti campi:
+
+- bit presenza/assenza: 1 = elemento valido, 0 = pagina virtuale non attualmente presente in memoria. (Accedere ad un elemento della tabella con questo bit a 0 provoca un fault di pagina)
+- bit protezione: 0 = diritti di lettura/scrittura, 1 = diritto di sola lettura
+- bit modified (dirty bit - bit sporco): viene messo ad 1 ogni volta che si scrive su una pagina.
+- bit referenced: viene messo ad 1 ogni volta che si fa un riferimento alla pagina in lettura o scrittura.
+- bit cache disabled: serve a disabilitare la cache della pagina, utile quando le pagine vengono mappate sui registri anzichè sulla memoria.
+- bit di validità o di allocazione: Il bit di allocazione nella tabella delle pagine serve a indicare se una determinata pagina di memoria è attualmente allocata o libera.
+
+[Vedi figura, slide 19]
+
+--- Tabella dei frame ---
+
+Viene usata dal Sistema Operativo per tenere traccia dello stato di occupazione (occupato/libero) di ogni frame della memoria fisica.
+
+Viene consultata:
+- Ogni volta che viene creato un nuovo processo
+- Quando un processo chiede di allocare una nuova pagina
+
+Il page fault è inevitabile e non si può annullare, avviene sempre quando si avvia per la prima volta un programma.
+Il compito del S.O. è ridurre il più possibile i page fault.
+
+--- Progettazione di una tabella delle pagine ---
+
+Due aspetti principali da curare:
+
+- Velocità
+- Dimensione
+
+Trattiamo inizialmente l'aspetto relativo alla velocità di consultazione.
+
+--- Translation Lookaside Buffer (TLB) ---
+
+Le tabelle delle pagine la maggior parte delle volte vengomo mantenute in memoria.
+
+Un programma fa tanti riferimenti ad un piccolo numero di pagine.
+
+La soluzione consiste in un piccolo dispositivo hardware contenuto all'interno della MMU che serve a mappare gli indirizzi virtuali in fisici senza passare dalla tabella delle pagine.
+Questo dispositivo prende il nome di TLB: Translation Lookaside Buffer (oppure Memoria Associativa).
+
+La TLB (Translation Lookaside Buffer) è una cache speciale utilizzata per accelerare le operazioni di traduzione degli indirizzi virtuali dei processi in indirizzi fisici di memoria. 
+La TLB memorizza le coppie di indirizzi virtuali e fisici delle pagine di memoria recentemente utilizzate, riducendo la necessità di effettuare costose ricerche nella tabella delle pagine ogni volta che viene richiesta una traduzione degli indirizzi.
+
+Contiene informazioni che riguardano una pagina:
+- Numero della pagina virtuale
+- Bit modificato (1 quando la pagina è stata modificata)
+- Codice di protezione (Permessi di lettura/scrittura/esecuzione)
+- Pagina fisica in cui si trova la pagina virtuale
+- Bit che indica se l'elemento è valido oppure no
+
+--- Come funziona TLB ---
+
+Quando alla MMU arriva un indirizzo virtuale da tradurre, l'hardware controlla prima se il relativo numero è presente nella TLB (TLB hit), altrimenti (TLB miss) si ricerca l'elemento nella tabella delle pagine.
+
+In caso di TLB Miss la pagina ricercata viene inserita nella TLB perchè con molta probabilità verrà richiesta in un futuro prossimo.
+
+AISD (Address Space Identifier) e FLUSH sono operazioni che coinvolgono la TLB:
+
+- AISD (Address Space Identifier): L'AISD è una tecnica utilizzata per consentire a un sistema operativo di isolare lo spazio di indirizzamento virtuale di un processo da quello di altri processi.
+
+In breve, l'AISD è utilizzato per selezionare la tabella delle pagine corretta da utilizzare per la traduzione degli indirizzi virtuali di un processo, consentendo il corretto isolamento dello spazio di indirizzamento.
+
+- FLUSH: Il FLUSH della TLB è un'operazione che viene eseguita per rimuovere tutte le voci presenti nella TLB.
+
+--- Effective Access Time (EAT) ---
+
+Esercizio:
+- Tempo di accesso alla memoria: 100 nsec
+- Tempo di accesso alla TLB: 20 nsec
+
+Tempo effettivo di accesso:
+
+TLB Hit: 100 nsec + 20 nsec = 120 nsec
+TLB Miss: 100 nsec + 20 nsec + 100 nsec = 220 nsec
+
+Gli aggiuntivi 100 nsec in caso di TLB Miss sono dovuti al fatto che non trovando l'indirizzo in TLB devo accedere nuovamente in memoria per consultare la tabella delle pagine.
+
+Ipotizziamo adesso un TLB ratio dell'80% (Significa che 8 volte su 10 trovo la pagina in TLB)
+
+EAT = (0.8 * 120) + (0.2 * 220) = 140 nsec
+
+Supponiamo adesso un TLB ratio del 60%
+
+EAT = (0.6 * 120) + (0.4 * 220) = 160 nsec
+
+Formula generale EAT: ε (α + β) + (1 - ε) (2α + β)
+
+α: 100 nsec
+β: 20 nsec
+ε: 0.8
+1 - ε: 0.2
+
+EAT: 0.8*(100 + 20) + (1 - 0.8)*(200 + 20) = 140 nsec
+
+--- Tabella delle pagine multilivello ---
+
+La soluzione al problema delle dimensioni della tabella delle pagine consiste nel non mantenere l'intera tabella in memoria.
+
+La tabella delle pagine multilivello è una struttura di dati gerarchica utilizzata per gestire grandi spazi di indirizzamento virtuale.
+Organizzata in più livelli, semplifica la ricerca delle traduzioni degli indirizzi e permette una gestione efficiente della memoria virtuale nei sistemi operativi.
+
+Questo approccio consente di ridurre la dimensione complessiva della tabella delle pagine e semplifica la ricerca delle traduzioni degli indirizzi.
+
+--- Tabella delle Pagine Invertite ---
+
+Le tabelle delle pagine tradizionali richiedono un elemento per ogni pagina virtuale.
+La soluzione è la tabella delle pagine invertite: in questa tabella è presente un elemento per ogni pagina fisica, invece che un elemento per ogni pagina virtuale.
+
+Questo permette di recuperare una gran quantità di spazio, in tutti i casi in cui lo spazio di indirizzamento virtuale sia maggiore di quello fisico introducono un grande problema:
+La traduzione da indirizzo fisico a virtuale diventa molto più difficile.
+
+Effettuare la ricerca in una tabella molto grande è un'operazione molto lenta da effettuare.
+La soluzione è quella di avere una tabella hash indicizzata sull'indirizzo virtuale accoppiato all'utilizzo della TLB che mantiene tutte le pagine utilizzate più di frequente.
+
+--- Algoritmi di rimpiazzamento delle pagine ---
+
+Quando si verifica un fault di pagina il sistema operativo deve scegliere una pagina da rimuovere dalla memoria per fare spazio a quella che deve essere caricata.
+
+Per ottenere prestazioni migliori e minimizzare il numero di page fault la soluzione ottimale è quella di scegliere una pagina che non viene usata frequentemente.
+
+--- Algoritmo ottimale ---
+
+Il miglior algoritmo possibile per il rimpiazzamento delle pagine è facile da descrivere ma impossibile da implementare.
+L'algoritmo ottimale dice semplicemente che dovrà essere rimossa la pagina che non viene utilizzata da più tempo.
+Questo algoritmo è irrealizzabile perchè al momento del page fault il sistema operativo non sa se in futuro si farà riferimento o meno a quella pagina appena eliminata.
+
+--- Algoritmo Not Recently Used (NRU) ---
+
+Il Sistema Operativo per conoscere le informazioni sulle pagine usate e non usate prende in considerazione due bit per ogni pagina:
+
+- R: Viene messo ad 1 0gni volta che una pagina viene letta (referenziata)
+- M: Viene messo ad 1 0gni volta che la pagina viene scritta (modificata)
+
+Questi bit vengono agggiornati ad ogni riferimento in memoria, una volta che un bit viene messo ad 1 solo il SO può rimetterlo a 0.
+
+I bit R ed M sono usati per costrutire l'algoritmo di paginazione NRU che si basa sulle seguenti classi:
+
++--------+-------+-------+
+| Classe | Bit R | Bit M |
++--------+-------+-------+
+|    0   |   0   |   0   |
++--------+-------+-------+
+|    1   |   0   |   1   |
++--------+-------+-------+
+|    2   |   1   |   0   |
++--------+-------+-------+
+|    3   |   1   |   1   |
++--------+-------+-------+
+
+L'algoritmo NRU rimuove una pagina a caso della classe non vuota con il numero più basso.
+Prestazioni non ottimali ma soddisfacienti.
+
+--- Algoritmo FIFO ---
+
+Il sistema operativo mantiene una lista di tutte le pagine attualmente in memoria, la pagina in testa è la più vecchia, in coda quella arrivata più di recente.
+
+Al momento del page fault viene rimosssa la pagina in testa ed inserita in coda alla lista.
+
+Tuttavia questo algoritmo presenta un grande problema: potrebbe eliminare pagone sì vecchie ma molto usate.
+
+--- Algoritmo della seconda opportunità ---
+
+Versione migliore del FIFO appena visto.
+Controlla il bit R della pagina più vecchia, 
+- se è a 0 significa che non è stata usata di recente e può essere rimpiazzata.
+- se è ad 1 viene posto a 0 e la pagina viene spostata in coda nella FIFO.
+
+[Vedi figura, slide 30]
+
+--- Algoritmo dell'orologio ---
+
+L'algoritmo della seconda opportunità ha un difetto, risulta inefficiente in quanto sposta continuamente le pagine in fondo alla lista.
+Una soluzione è quella di mantenere le pagine in una lista concatenata circolare tramite un puntatore in coda alla lista che punta alla sua testa.
+
+
+[Vedi figura, slide 31]
+
+--- Algoritmo LRU ---
+
+Ideaa di base:
+- Pagine frequentemente usate => Verranno usate anche nelle prossime istruzioni
+- Pagine non usate da tempo => Non verranno usate nelle prossime istruzioni
+
+LRU (Least Recently Used) usa la strategia di eliminare la pagina che non è stata usata da più tempo.
+
+Due metodi di implementazione:
+
+- Contatore hardware
+	Viene incrementato ad ogni istruzione, dopo che una pagina è stata referenziata il suo valore viene copiato all'interno della pagina.
+	Quando si verifica un page fault, viene eilimata la pagina con il contatore più basso. (Quella meno recente)
+
+- Matrice di bit
+	Dimensione n*n (n = numero di pagine fisiche).
+	Inizialmente viene inizializzata con tutti 0.
+	Ogni volta che viene referenziata la pagina x:
+		- Tutta la riga x viene messa ad 1
+		- Tutta la colonna x viene messa a 0
+	La riga con il più piccolo valore binario rappresenta la pagina meno usata di freqente.
+	
+	[Vedi esempio, slide 32]
+
+
+--- Algoritmo NFU ---
+
+Soluzione software all'algoritmo LFU.
+
+L'algoritmo NFU (Not Frequently Used) utilizza un contatore associato ad ogni pagina.
+Ad ogni clock interrupt, questo contatore viene incrementato del bit R (0 o 1)
+
+Problema: può erroneamente privilegiare pagine che sono state molto utilizzate in passato ma che invece sono scarsamente usate di recente: queste lo saranno, probabilmente, anche nel prossimo futuro.
+
+--- Algoritmo di Aging ---
+
+Conosciuto anche come algoritmo di invecchiamento.
+
+Rappresenta una versione migliorata di NFU, la modifca avviene in due fasi:
+
+1) Ogni contatore viene shiftato a destra di 1
+2) Viene sommato il bit R al bit più a sinistra
+
+Esempio:
+
+Pagina 0 (bit R ad 1) => 10000000 => Shift a destra => 01000000 => Sommo R al primo bit => 11000000
+
+Quando si verifica un page fault viene rimossa la pagina con il contatore più basso.
+
+[Vedi esempio, slide 34] (Spiegazione libro: pagina del PDF 112 - 113)
+
+--- Confronto delle prestazioni ---
+
+[Vedi allegato, confrontoPrestazioni.pdf]
+
+- Anomalia di Belady: All'aumentare del numero dei frame aumentano i fault di pagina.
+
+Soffrono dell'anomalia di Belady i seguenti algoritmi:
+- FIFO
+- Seconda Chance
+- Clock
+- NRU (Not Recently Used)
+
+- Proprietà di inclusione: L'insieme delle pagine caricate in n frame è incluso in quello che si avrebbe in n+1 frame.
+
+Godono della proprietà di inclusione i seguenti algoritmi:
+
+- Not Frequently Used
+- Aging
+
+--- Allocazione dei Frame ---
+
+Tre strategie di allocazione:
+
+- Allocazione equa: Ad ogni processo viene associata la stessa quantità di memoria)
+- Allocazione per priorità
+- Allocazione proporzionale: Formula => ai = (si/S)*m
+
+i: processo
+si: dimensione del processo i
+S: somma della dimensione di tutti i processi (Σsi)
+m: numero di frame
+
+Quando scegliamo di rimpiazzare una pagina, uno dei più grandi problemi associati a questa scelta sta nel decidere come vada allocata la memoria tra i vari processi.
+
+Obiettivo: Scegliere la pagina meno usata (con età minore)
+
+Due alternative: 
+
+- Allocazione locale: Sceglie la pagina con età minore tra quelle già allocate al processo X.
+- Allocazione globale: Sceglie la pagina con età minore senza considerare a quello processo appartiene.
+
+In generale gli algoritmi globali lavorano meglio, specialmente quando la dimensione può variare durante la vita di un processo.
+
+--- Come eliminare il trashing? ---
+
+Bisogna capire la differenza tra i frame assegnati e quelli utlizzati realmente.
+
+Modello di località: Mentre un processo viene eseguito ci si sposta da una località ad un'altra.
+Località: Insieme di pagine che vengono utilizzate attivamente contemporaneamente.
+
+Quando si entra in una nuova località si generano indubbiamente page fault.
+
+--- Working Set ---
+
+Il working set è un insieme di pagine di un processo utilizzate nell'ultimo intervallo di tempo.
+Tutte le pagine del working set non generano quindi page fault.
+
+Si basa su un parametro Δ che definisce la dimensione del working set.
+Indica quindi il numero delle pagine frequentemente utilizzate.
+
+[Vedi esempio, slide 45]
+
+Prepaginazione: Tenere traccia del working set permette di caricare le pagine prima che il processo vada in esecuzione.
+
+--- Come si calcola il working set? ---
+
+- interrupt periodici;
+- bit di referenziamento R;
+- un log che conserva la ”storia di R” in base al parametro Δ
+
+--- Page Fault Frequency (PFF) ---
+
+Un modo di gestire l'allocazione è di utilizzare l'algoritmo PFF (Page Fault Frequency).
+Indica quando incrementare o decrementare l'allocazione di una pagina controllando la dimensione allocata.
+
+L'upper bound (A) è un tasso di page fault troppo alto (trashing), quando si verifica questo evento vengono assegnate al processo ulteriori frames per ridurre il tasso di page fault.
+Il lower bound (B) è un tasso di page fault troppo basso, quando si verifica questo evento significa che al processo è stata assegnata troppa memoria, vengono quindi tolti al processo ulteriori frames per incrementare il tasso di page fault.
+
+Per evitare il trashing è sufficiente non superare l'upper bound.
+
+Se il tasso di page fault sta nel range [B,A] allora il numero di page fault è nella norma.
+
+Quando si ha un picco di page fault ci ritroviamo in una nuova località di memoria.
+
+--- Politiche di pulizia ---
+
+La paginazione funziona bene quando c'è una gran quantità di agine fisiche da poter allocare.
+Per assicurare sempre la presenza di pagine libere, molti sistemi di paginazione hanno un processo in background chiamato demone di paginazione.
+
+Il demone di paginazione (paging deamon) è un processo inattivo che viene risvegliato ad intervalli fissi per ispezionare lo stato della memoria.
+Se il numero di pagine fisiche libere è basso, questo processo seleziona delle pagine le libera ed eventualmente le pulisce.
+
+Mantenere un numero di pagine libere dà prestazioni migliori che allocare tutta la memoria disponibile.
+
+--- Dimensione della pagina ---
+
+La dimensione della pagina viene scelta spesso dal sistema operativo.
+
+Partiamo dal presupposto che in media solo la metà della pagina viene effettivamente allocata.
+
+Scegliere una pagina piccola riduce quindi lo spreco in memoria (frammentazione interna).
+Avere pagine di memoria piccole implica la necessità di avere un maggior numero di pagine e quindi tabelle delle pagine più grosse.
+
+Scegliere una pagina grande permette aumenta lo spreco di memoria, ma integra i seguenti vantaggi:
+
+- Tabella delle pagine più piccola
+- Migliore efficienza nel trasferimento I/O
+- Minor numero di page fault
+
+--- Pagine condivise ---
+
+Condividere le pagine permette a più utenti di far girare lo stesso programma nello stesso momento senza creare più copie dello stesso file.
+Quando due o più processi condividono del codice si verifica il problema delle pagine condivise.
+
+In un sistema paginato quello che si fa è fornire a ciascuno di questi programmi la propria tabella delle pagine, questo permette la possibilità di non effettuare alcuna copiatura delle pagine al momento della fork, tuttavia le pagine mappate sono solo READ_ONLY.
+
+Quando un processo oltre a leggere, vuole anche scrivere genera una TRAP nel sistema operativo.
+Viene quindi fatta una copia READ_WRITE della pagina, in modo che ogni processo abbia una sua copia privata.
+Questo approccio prende il nome di copy-on-write ovvero "copia quando scrivi".
+
+Altra soluzione è invece il "zero-fill-on-demand", funziona allo stesso modo della copy-on-write ma le nuove pagine sono vuote ed allocate solo su richiesta.
+Chi si occupa dell'azzeramento delle pagine è il kernel.
+
+Nota bene: Le pagine possono essere azzerate solo quando il sistema è inattivo
+
+Difficoltà:
+
+- gestione della cache:
+	- problemi di sincronizzazione con cache basate su indirizzi virtuali(anche se usano gli ASID);
+	soluzioni:
+		- disabilitare la cache sulle pagine condivise;
+		- usare cache con ricerca basata su indirizzi virtuali e tag fisici:
+		la cache ricerca in parallelo con la TLB sulla base dell'indirizzo virtuale;
+		per capire se si tratta di un duplicato dobbiamo aspettare che la TLB dia in output l'indirizzofisico;
+
+- tabella delle pagine invertita:
+	- singolo core 
+		- alterazione tabella su context switch o su pagefault;
+	- multi core 
+		- difficilmente gestibile se non con teoriche tabelle delle pagine invertite con corrispondenze molti-a-uno
+
+--- Librerie condivise ---
+
+Le librerie (come per esempio <stdlib.h>) possono essere collegate al codice in due modalità differenti:
+
+- Linking statico: Le librerie sono tutte incluse nell'eseguibile del codice 
+- Linking dinamico: Il collegamento tra codice e librerie avviene in fase di run-time
+
+Il linking dinamico permette un risparmio di spazio su disco e RAM ed una facilità di aggiornamento.
+
+--- File mappati ---
+
+Modello alternativo di I/O su file, consente l'accesso ai file in modo più rapido.
+Se più processi mappano lo stesso file lam modifica ha validità su tutti gli altri utenti.
+
+Gestiscono automaticamente:
+- librerie condivise;
+- caricamento codice eseguibile;
+- caricamento dei dati statici.
+
+--- Allocazione della memoria per il kernel ---
+
+Due porzioni di memoria:
+
+- Processi utente: Pagina con frammentazione interna
+- Processi kernel: Frammentazione interna minima o nulla, impossibilità di paginazione
+
+--- Slab allocation ---
+
+Lo slab è una sequenza di pagine fisicamente contigue
+La cache è un insieme di uno o più slab
+
+Uno slab può essere pieno, vuoto o parziale.
+Se si deve allocare un nuovo oggetto, il kernel:
+
+1) Controlla gli slab parziali
+2) Controlla gli slab vuoti
+3) Controlla gli slab pieni
+
+I vantaggi nell'utilizzare gli slan sono i seguenti:
+
+- Nessuna frammentazione
+- Nessuno spreco di memoria
+- Maggiore efficienza
+
+

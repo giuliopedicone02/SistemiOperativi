@@ -1,0 +1,173 @@
+--- Cos'è un sistema operativo? ---
+
+I moderni calcolatori sono formati da:
+- Uno o più processori
+- Memoria centrale
+- Dischi
+- Stampanti e altre periferiche I/O
+
+Chi gestisce tutte queste componenti è il Sistema Operativo.
+
+L'Hardware dove è installato il Sistema Operativo supporta due modalità
+- Modalità utente: Accesso protetto e limitato alla memoria
+- Modalità kernel (o supervisor, amministratore): Accesso universale alla memoria
+
+Tutto ciò che è eseguito in modalità kernel è parte del Sistema Operativo.
+
+- Eccezioni:
+Il cambio password viene avviato in modalità utente ma la modifica viene applicata a tutto il SO in modalità kernel.
+
+--- Il sistema operativo come gestore delle risorse ---
+
+Oggi un calcolatore deve essere in grado di gestire più programmi e più utenti contemporaneamente.
+La gestione delle risorse comporta la loro condivisione in due aspetti:
+
+- Rispetto al tempo: Programmi o utenti diversi fanno a turno per utilizzare una risorsa.
+- Rispetto allo spazio: Ad ogni programma/utente viene assegnata una parte della risorsa.
+
+--- Il Processore ---
+
+Effettua tre semplici operazioni cicliche:
+1) Prelievo (Fetch)
+2) Decodifica
+3) Esecuzione
+
+Alcuni dei registri più importanti del processore sono:
+- PC (Program Counter): Contiene l'indirizzo della memoria dove si trova la prossima istruzione
+- IR (Instruction Register): Contiene l'istruzione attualmente in esecuzione
+- SP (Stack Pointer): Contiene l'indirizzo della locazione di memoria in cima allo stack
+- PSW (Program Status Word): Contiene informazioni sulla priorità nella CPU, modalità (kernel o utente) ed altri bit di controllo.
+
+Pipeline: Permette di eseguire più operazioni contemporaneamente.
+CPU Superscalare: Pipeline avanzata dove sono presenti unità multiple di esecuzione.
+
+--- Modalità di esecuzione ---
+
+Per ottenere servizi dal SO, un programma deve eseguire una chiamata di sistema (System Call)
+L'istruzione TRAP cambia da modalità utente a modalità kernel ed avvia il sistema operativo.
+
+--- Più processori ---
+
+Multithreading: Suddividere i processi in thread (sottoprocessi) ed eseguirli in modo pseudoparallelo (utile in caso di singolo processore)
+Multiprocessori: Esegue più processi contemporaneamente, uno per processore.
+
+Vantaggi del multicore:
+- Throughput: Frequenza con la quale vengono trasmessi i dati
+- Economia di scala
+- Affidabilità
+
+--- Memorie ---
+Rappresentano la seconda componente più importante in ogni calcolatore, subito dopo il processore.
+La memoria è cosruita come una gerarchi.
+
+1. Registri
+2. Cache
+3. RAM
+4. Hard Disk (o disco magnetico)
+
+
+Più la memoria è piccola in termini di capienza più il tempo di accesso ad essa sarà veloce.
+
+--- Dispositivi Di I/O ---
+
+Il controllore è un insieme di chip, posti su una scheda estraibile che controllano il dispositivo ed accettano comandi dal Sistema Operativo.
+Dato che ogni controllore è diverso, sono necessari software diversi per controllare ognuno di essi.
+Il software che parla al controllore, prende il nome di driver.
+
+Per essere usato un driver deve essere posto nel sistema operativo per essere esegito in modalità kernel.
+In questa modalità sono disponibili le istruzioni IN ed OUT che permettono ai driver di leggere e scrivere i registri.
+
+Quando l'operazione di I/O termina, il sistema operativo restituisce il controllo al chiamante.
+Questo metodo è detto busy waiting ed ha lo svantaggio di tenere occupata la CPU finchè l'operazione di I/O è finita.
+
+Il secondo metodo prevede che il driver faccia partire il dispositivo e che questo mandi un interruzione (interrpupt) al driver quando ha finito, dopodichè il driver termina la sua esecuzione.
+
+Il terzo metodo per fare I/O è detto DMA (Direct Memory Access) che può controllare il flusso dei bit tra la memoria ed i controllori senza il continuo intervento della CPU.
+
+--- BUS ---
+
+Un calcolatore è composto da una CPU e da un insieme di controllori di dispositivi connessi mediante un bus comune. 
+L'USB (Universal Serial Bus) è stato inventato per permettere di collegare al calcolatore tutti i dispositivi di I/O lenti, come tastiera e mouse.
+
+--- Lo Zoo dei Sistemi Operativi ---
+
+* Sistemi Operativi Mainframe
+
+Calcolatori di grandi dimensioni presenti nei centri di elaborazione delle principai aziende.
+I Sistemi operativi per mainframe sono fortemente orientati al multitasking, dove ogni task necessita di una quantità enorme di dati in ingresso o uscita.
+
+* Sistemi operativi per i server
+
+Computer molto grandi che servono più utenti in rete contemporaneamente.
+I sistemi operativi comunnemente usati per i server sono UNIX, Linux e Windows 2000.
+
+* Sistemi operativi per Personal Computer
+
+Il compito di questi SO è fornire na buona interfaccia utente, l'accesso ad internet e programmi di elaborazione testi e fogli di calcolo.
+Esempi: Windows, MAC, Linux.
+
+* Sistemi operativi real-time
+
+Sono utilizzati per raccogliere i dati al processo di produzione ed usarli per controllare i macchinari degli stabilimenti.
+Il loro parametro chiave è il tempo. Esempi: VxWorks, QNX.
+
+--- Struttura di un Sistema Operativo ---
+
+Alcune possibili strutture per un SO:
+
+- Monolitici
+- A livelli (o a strati)
+- Microkernel
+- A Moduli
+- Macchine virtuali
+
+--- Struttura Monolitica ---
+
+Il sistema operativo è scritto come un insieme di procedure, ciascuna delle quali può chiamarne una qualunque delle altre.
+Supporta la modalità kernel/utente (Gestione dei permessi).
+Poco gestibile nel tempo.
+Esempi: MS-DOS, UNIX.
+
+--- Struttura a livelli o a strati ---
+Vi sono molti modi per rendere modulare un sistema operativo. 
+Uno di essi è il metodo stratificato, secondo il quale il sistema è suddiviso in un certo numero di livelli o strati:
+il più basso corrisponde all’hardware (strato 0), il più alto all’interfacciacon l’utente (strato N).
+Ogni livello implementa delle funzionalità impiegando quelle 
+fornite da quello inferiore.
+Problemi di prestazioni dovuti alle chiamate nidificate e al relativo overhead (Richesta di più risorse del dovuto).
+
+--- Microkernel ---
+
+- Uso di un microkernel minimale che si occupa dello scheduling, memoria e IPC;
+- Tutto il resto gestito da moduli (livello utente): filesystem, driver di dispositivi;
+- Comunicazione attraverso messaggi
+
+Esempi: MINIX 3, Mach, QNX, Mac OS (Darwin), Windows NT
+
+--- Struttura a Moduli ---
+
+Idea della programmazione OO applicata al kernel.
+Kernel: Software che fornisce un accesso sicuro e controllato dell'hardware ai processi in esecuzione sul computer.
+
+- Design pulito ed efficiente
+- Ogni modulo può invocare qualunque altro direttamente
+- Funziona senza messaggi
+
+Esempi: Solaris, Linux, MAC OS
+
+--- Struttura a Moduli ---
+Estremizzazione del concetto di astrazione porta alla virtualizzazione.
+Viene tutto gestito dallo Hypervisor.
+
+L’hypervisor è un software adibito alla gestione delle risorse necessarie. Conosciuto anche come Virtual Machine Monitor (VMM), assegna memoria, spazio su disco fisso, componenti di rete o potenza di elaborazione all’interno del sistema.
+
+Hypervisor di tipo 1:
+- gira direttamente sull'hardware;
+- esempi: VMware ESX/ESXi, Microsoft Hyper-V hypervisor;
+ 
+Hypervisor di tipo 2:
+- è un processo del sistema operativo ospitante
+- esempi: VMware Workstation, VirtualBox.
+
+Esempi: Java Virtal Machine (JVM)
+

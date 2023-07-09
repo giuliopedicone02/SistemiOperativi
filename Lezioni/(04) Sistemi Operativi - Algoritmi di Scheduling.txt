@@ -1,0 +1,258 @@
+--- Schedulazione dei Processi ---
+
+Un dispositivo si ritrova spesso diversi processi che competono per l'uso della CPU contemporanemanente.
+
+Bisogna quindi sceliere quale processo eseguire e quali lasciare nello stato di ready.
+Chi si occupa di questa decisione viene chiamato Scheduler, l'algoritmo che usa prende il nome di Algoritmo di Schedulazione (scheduling algorithm).
+
+L'attività dello scheduler è fondamentale per rendere più efficienti le prestazioni di una macchina, minimizzando il tempo necessario per lo scambio tra processi.
+
+I processi possono essere di due diverse tipologie:
+
+- CPU-Bounded: Passano la maggior parte della loro attività in esecuzione
+- I/O-Bounded: Passano la maggior parte della loro attività in gestione di richieste I/O
+
+--- Quando viene attivato lo scheduler? ---
+
+- Creazione di un nuovo processo (fork ed exec): Si deve decidere se eseguire il processo genitore o figlio
+- Terminazione di un processo: Scegliere quale processo che si trova in stato di ready deve andare in esecuzione
+- Quando un processo si blocca per un operazione I/O, per un semaforo...
+- Quando si verifica un'interruzione di I/O: Scegliere se eseguire il processo appena entrato in stato di ready, il processo che era in esecuzione o un terzo processo.
+
+Gli algoritmi di schedulazione si possono dividere in due categorie:
+
+- Algoritmi non-preemptive (senza prerilascio): Sceglie un processo da eseguire e lo lascia in esecuzione finchè non termina. 
+- Algoritmi preemptive (con prerilascio): Sceglie un processo da eseguire e lo lascia in esecuzione per una quantità fissata di tempo. (Interrupt di clock: Il processo esaurisce il suo quanto di tempo)
+
+La differenza tra i due tipi di algoritmi sta nel fatto che i primi attendono che un processo rilasci volontariamente la CPU, i secondi possono bloccare un processo in qualsiasi istante per poter rilasciare la CPU.
+
+Dispatcher: Collabora con lo scheduler, si occupa di context switch e dello switrch tra modalità utente e modalità kernel.
+
+Il compito del dispatcher è quello di eseguire queste operazioni nel minor tempo possibile.
+
+Latenza di dispatch: Tempo necessario per bloccare un processo e crearne uno nuovo.
+
+--- Tipi di algoritmi di schedulazione ---
+
+Esistono tre tipologie di ambienti:
+
+1. Batch
+2. Interattivi
+3. Real-time
+
+- Sistemi batch -
+
+Sono sistemi dove NON ci sono utenti che attendono una risposta immediata, si predilige questa scelta quando si hanno processi con un lungo tempo di esecuzione.
+Di conseguenza, sono spesso utilizzati algoritmi non-preemptive. Questo approccio riduce gli scambi tra processi, migliorando le prestazioni.
+
+- Sistemi interattivi -
+
+In un ambiente interattivo l'obiettivo principale è quello di eseguire le richieste dell'utente nel minor tempo possibile.
+Il prerilascio, quindi gli algoritmi preemptive, sono fondamentali per evitare che un processo si impossessi della CPU, impedendo agli altri processi di ottenere servizi.
+
+- Sistemi real-time -
+
+In un ambiente real-time è fondamentale che un processo venga eseguito in un determinato istante.
+In questi sistemi funzionano sia gli algoritmi preemptive che non, questo perchè solitamente i processi non vengono eseguiti per lunghi periodi di tempo e si bloccano in fretta.
+
+--- Obiettivi degli algoritmi di schedulazione ---
+
+Obiettivi comuni:
+
+- Equità nell'assegnazione della CPU: I processi con la stessa priorità devono essere trattati dallo scheduler tutti allo stesso modo.
+- Rispetto e applicazione delle politiche di sistema
+- Bilanciamento nell'uso delle risorse: Tenere occupate, quando possibile, tutte le parti del sistema occupate.
+
+
+Obiettivi dei Sistemi Batch:
+
+- Throughput: Massimizzare il numero di processi eseguiti e completati in un'unità di tempo
+- Turnaround: Minimizzare il tempo medio che passa tra l'arrivo del processo ed il suo completamento
+- Minimizzare il tempo di attesa nella coda dei processi in stato di ready
+
+Obiettivi dei Sistemi Interattivi:
+
+- Minimizzare il tempo di risposta: Tempo che passa tra l'invio della richiesta da parte dell'utente ed il suo completamento
+- Proporzionalità: Andare incontro alle aspettative degli utenti
+
+Obiettivi dei Sistemi real-time:
+
+- Rispettare le scadenze: Si evita la perdita dei dati
+- Prevedibilità: Come deve comportarsi lo scheduler in caso di scadenze non rispettate, evitando la degradazione qualitativa dei sistemi multimediali
+
+--- Scheduling dei sistemi batch ---
+
+Esistono tre strategie differenti:
+
+1) First Come First Served (FIFO)
+
+Algoritmo senza prerilascio (non-preemptive) che sfrutta l'ideologia del "Primo arrivato, Primo Servito", ai processi viene assegnata la CPU nell'ordien in cui essa viene richiesta.
+
+Vantaggio: Nei sistemi batch ogni processo ha la stessa priorità, questo permette di non implementare la coda di priorità.
+Svantaggio: Penalizza molto i processi I/O che avranno dei ritardi nell'entrare in esecuzione
+
+2) Shortest Job First (SJF)
+
+Algoritmo senza prerilascio (non-preemptive) che ha come presupposto la conoscenza anticipata dei tempi di esecuzione.
+Questo algoritmo da buoni risultati solo se i processi sono tutti disponibili, allo stesso istante altrimenti funziona meglio SRTN.
+
+3) Shortest Remaining Time Next (SRTN)
+
+Algoritmo con prerilascio (preemptive).
+Lo schedulatore sceglie per primo il processo in cui il tempo di esecuzione residuo è il più breve.
+Quando arriva un nuovo job (processo), il suo tempo totale viene confrontato con quello residuo,cse il nuovo job ha bisogno di meno tempo per finire del processo corrente questo viene sospeso e viene iniziato il nuovo job.
+
+--- Esempio di calcolo tempo medio di attesa e tempo medio di completamento ---
+
+t.m.a: Tempo medio di attesa
+t.m.c: Tempo medio di completamento
+
+[Esempi di esercizi disponibili al file pdf: "Esercizi sui Diagrammi di Gantt"]
+
+--- Scheduling nei Sistemi Interattivi ---
+
+Uno degli algoritmi più semplici ed usati nei sistemi interattivi è il Round Robin (RR).
+In questo tipo di algoritmo, ad ogni processo viene assegato un intervallo di tempo chiamato "quanto di tempo" (timeslice), durante il quale va in esecuzione.
+Se alla fine del suo quanto di tempo il processo è ancora in esecuzione, la CPU viene rilasciata dando spazio ad un altro processo.
+
+Questo ci fa capire che il RR è ovviamente un algoritmo preemptive.
+
+Il Round Robin è facile da implementare, lo schedulatore ha bisogno solo di una lista dei processi eseguibili.
+
+Per ottenere buoni risultati da questo algoritmo è necessario quindi stabilire una durata efficiente del quanto di tempo.
+Tipicamente i valori di timeslice oscillano tra i 20ms ed i 50ms, bisogna porre attenzione però anche al tempo impiegato dallo scambio dei processi (context switch o process switch).
+
+Il context switch è tutto l'insieme di procedure per passare da un processo ad un altro come:
+- Salvare e caricare i registri
+- Salvare e caricare le mappe di memoria
+- Aggiornare le varie tabelle
+- Svuotare e ricaricare la cache
+
+Un quanto di tempo troppo breve provoca context switch frequenti peggiorando l'efficienza della CPU.
+Un quanto di tempo troppo lungo provoca tempi di risposta lunghi per richieste interattive brevi.
+
+--- Schedulazione con Priorità ---
+
+La schedulazione Round Robin ha un grande vincolo: ipotizza che tutti i processi abbiano la stessa importanza.
+Nasce quindi l'esigenza di una schedulazione con priorità.
+L'idea è semplice: ad ogni processo viene assegnata una priorità, viene concesso l'accesso alla CPU al processo con la priorità più elevata.
+
+Per evitare che un processo ad alta priorità rimanga indefinitamente in esecuzione, lo scheduatore può modificarne la priorità (decrementandola, fino a farla diventare inferiore di quella successiva) facendo avvenire quindi il context switch tra processi.
+Il sistema UNIX ha un comando "nice" che permette di ridurre volontariamente la priorità di un processo.
+
+Le priorità possono essere assegnate staticamente o dinamicamente.
+Nell'assegnazione dinamica si favoriscono i processi I/O bounded, ovvero quelli che passano la maggior parte del loro tempo in attesa del completamento delle operazioni I/O. Ogni volta che un processo del genere vuole lU gliela si deve assegnare immediatamente.
+
+Un algoritmo semplice, che rende un buon servizio ai processi I/bound, è quello di assegnare priorità 1/f dove f è la frazione del quanto di tempo che un processo ha usato.
+Esempio 1: Un processo ha un quanto di tempo di 50ms ma ne usa solamente 1ms, la sua priorità è 50.
+Esempio 2: Un processo ha un quanto di tempo di 50ms ma ne usa solamente 25ms, la sua priorità è 2.
+
+--- Code multiple ---
+
+Si basano sul concetto di "classi di priorità": i processi con classe più alta vengono eseguiti per un quanto di tempo, quelli della classe immediatamente inferiore per due quanti di tempo, la succesiva quattro quanti di tempo etc...
+Ogni qualvolta un processo va in esecuzione per tutto il quanto di tempo, viene spostato nella classe sottostante.
+
+Problema di Starvation: Caso in cui tutti i programmi vanno in esecuzione per un tempo indefinito senza compiere alcun progresso
+Soluzione: Incremento graduale della priorità ("aging")
+
+
+--- Shortest Process Next ---
+
+Algoritmo SJF modificato per farlo funzionare anche sui sistemi interattivi.
+Bisogna determinare quale processo eseguibile è il più breve.
+
+Per poterlo fare un approccio sarebbe quello di fare delle stime in base al tempo di esecuzione ed eseguire il processo con stima di tempo di esecuzione più breve.
+
+Soluzione: Media esponenziale delle stime del consumo di CPU 
+
+Formula: S(n+1) = S(n)*(1-a)+T(n)*a
+
+T(n): Tempo occupato nella CPU dal processo n.
+S(n+1): Stima di quanto tempo richiede il prossimo ciclo di burst
+a: Pesa un "ricordo" a breve/medio/lungo tempo.
+
+Nota bene: a=1 nessuna cronologia
+
+--- Esercizio di esempio su SPN ---
+
+T(n)=6
+S(n)=10
+a=0.5
+
+S(n+1)= 10*(0.5) + 6*(0.5) = 5+3 = 8
+
+--- Schedulazione garantita ---
+
+Approccio che consiste nel fare delle promesse relative alle prestazioni e mantenerle.
+Se ci sono n utenti collegati, ogni utente riceverà 1/n della potenza della CPU.
+
+Per poter mantenere la "promessa" il sistema deve tenere traccia di quanta CPU ogni processo ha ottenuto dal momento della sua creazione e calcolare quanta CPU ha ancora diritto ad avere.
+
+Formula: Tc/n (Tc: Tempo trascorso dalla creazione, n: numero di utenti)
+
+Un rapporto 0.5 significa che il processo ha avuto solo metà del tempo che gli spettava.
+Un rapporto 2.0 significa che il processo ha avuto il doppio del tempo che gli spettava.
+
+L'algoritmo manda in esecuzione il processo con rapporto minore.
+La schedulazione garantita è difficile da implementare, una soluzione più semplice è offerta dallo scheduling a lotteria.
+
+--- Schedulazione a lotteria ---
+
+Approccio che consiste nel fornire ai processi dei "biglietti della lotteria".
+Ogni volta che deve essere mandato in esecuzione un processo si estrae un biglietto, il processo che lo possiede ottiene la CPU.
+
+Ai processi più importanti possono essere assegnati biglietti extra per aumentare la probabilità di vittoria.
+I processi possono cooperare e scambiarsi i biglietti.
+
+--- Schedulazione fair-share (porzioni eque) ---
+
+Le strategie viste in precedenza schedulano processi senza considerare a quale utente appartengono.
+In questo modello ad ogni utente viene assegnata una frazione di CPU e lo schedulatore sceglie i processi in modo da rispettarla.
+
+Vantaggio: Realizza un equo uso della CPU tra gli utenti del sistema.
+
+--- Schedulazione dei Thread ---
+
+*** Thread Utente ***
+
+Il kernel non è consapevole dell'esistenza dei thread.
+Ssceglie quindi uno tra gli algoritmi non-preemptive visti in precedenza ed ogni processo va in esecuzione per tutto il suo quanto di tempo.
+
+Context switch molto basso.
+
+*** Thread Kernel ***
+
+Il kernel sceglie direttamente un thread in particolare da eseguire.
+Può scegliere se tenere in considerazione a quale processo appartiene il thread (attribuendogli un "peso"), o meno (tutti i thread sono uguali).
+Utilizza un approccio preemptive, scegliere thread appartenenti ad un altro processo significa avere tanti context switch.
+
+La differenza principale tra thread utente e thread kernel sono le prestazioni.
+Il context switch tra thread utente richiede poco tempo, tra thread kernel bisogna invece cambiare la mappa di memoria ed invalidare la cache queste operazioni richiedono molto più tempo.
+
+--- Scheduling Multiprocessore ---
+
+Nei sistemi multiprocessore si utilizzano diverse tecniche per gestire lo scheduling tra varie CPU/CORE.
+Esistono due tipi di multielaborazione:
+
+- Elaborazione Asimmetrica
+- Elaborazione Simmetrica
+
+*** Elaborazione Asimettrica ***
+
+Un core avrà il compito di eseguire solo il kernel e gestire gli altri processi, questo prende il nome di CPU Master.
+I restanti core detti CPU Slave si occuperanno della schedulazione dei vari processi.
+Questo approccio non consente la scalabilità in quanto la CPU Master non riuscirebbe a gestire contemporanemanente molte CPU slave.
+
+** Elaborazione Simmetrica ***
+
+In questo approccio tutti i core lavorano in modo bilanciato ed esistono due tecniche per implementarla:
+
+- Singola coda dei processi: Condivisa tra tutte le cpu, problemi di corse critiche e mutua esclusione
+
+- Code dedicate per ogni CPU: Ogni CPU avrà una sua coda dei processi.
+Vantaggio: Guadagno delle prestazioni (predilezione debole), effetto opposto è la predilezione forte dove si obbliga la CPU ad eseguire solo determinati processi.
+
+Meccanismi di bilanciamento del carico:
+
+- Migrazione guidata: Sfrutta un processo deamon che si assume il compito di gestire le code per ogni core e bilanciare il tutto
+- Migrazione spontanea: Quando una CPu non ha processi in coda chiede di eseguire processi da code di altri core.

@@ -1,0 +1,170 @@
+--- Definizione di processo ---
+
+Istanza di esecuzione di un programma.
+
+Tutti i calcolatori moderni svolgono attività diverse nello stesso momento.
+La CPU ad ogni istante esegue un solo processo, nell'arco di un secondo può lavorare su programmi diversi dando all'utente l'impressione di un parallelismo che in realtà chiameremo pseudo-parallelismo.
+Il vero parallelismo si ha solo in caso di hardware con multiprocessori.
+
+Ad ogni processo è associato il suo spazio degli indirizzi.
+Tutte le informazioni relative al processo devono essere salvate, per questo motivo esiste la **tabella dei processi**, dove ogni record prende il nome di PCB (Process Control Block).
+
+--- Stato di un processo ---
+
+Un processo può trovarsi in 3 stati principali
+
+- Ready: Il processo è in coda, attende di essere eseguito
+- Running: Processo in esecuzione (SOLO UNO)
+- Blocked: Il processo è stato bloccato è impossibilitato ad essere messo in esecuzione in attesa di qualche evento esterno
+
+Un processo dallo stato ready può passare in stato di running
+Un processo dallo stato running può passare in stato di ready (interrupt) o in stato blocked (evento I/O esterno)
+Un processo allo stato blocked può passare allo stato di ready
+
+Esistono in realtà altri 2 stati addizionali, ovvero:
+
+- New: Il processo è stato creato ed è pronto per entrare in stato di ready
+- Terminated: Il processo ha terminato la sua esecuzione
+
+--- Creazione di un processo ---
+
+A provocare la creazione di un processo sono principalmente tre eventi:
+
+- Inizializzazione del Sistema Operativo
+- L'esecuzione di chiamata di sistema per la creazione di un processo
+- Richiesta da parte dell'utente
+
+Un processo può essere attivo o passivo (in background) ovvero resta in attesa di un evento esterno (le app di messaggistica devono avere sempre un processo in background per poter funzionare correttamente).
+
+--- Creazione di un processo da un altro processo ---
+
+In UNIX esiste una chiamata di sistema che prende il nome di fork.
+Questa operazione crea una copia esatta del chiamante, in questo momento padre e figlio hanno la stessa immagine di memoria.
+
+Per rendere i due processi indipendenti in UNIX esiste la chiamata di sistema exec.
+
+In Windows il processo viene creato con: CreateProcess
+
+Sia in UNIX che in Windows ogni processo creato ha il proprio distinto spazio di indirizzamento, indipendente tra il processo padre ed il figlio.
+
+--- Terminazione dei processi ---
+
+Le cause di terminazione di un processo sono le seguenti:
+
+- Terminazione normale (volontaria)
+- Terminazione con errore (volontaria)
+- Errore fatale (involontaria)
+- Ucciso (kill in UNIX, TerminateProcess in Windows) da un altro processo (involontaria)
+
+--- Gerarchia dei processi ---
+
+In UNIX un processo e tutti i suoi figli formano un gruppo di processi.
+Esiste un processo speciale chiamato init, è il primo processo che il kernel manda in esecuzione dopo che il computer ha terminato la fase di bootstrap. 
+Esso ha il compito di portare il sistema in uno stato operativo, avviando i programmi e servizi necessari.
+
+In Windows non esiste un concetto di gerarchia dei processi, tutti sono uguali.
+Quando un processo viene creato il genitore riceve un token speciale chiamato handle che può usare per controllare il figlio.
+
+--- Tabella dei Processi ---
+
+Contiene tutte le informazioni importanti sullo stato del processo:
+- Il suo program counter (prossima istruzione da eseguire)
+- Lo stack pointer (posizione dell'ultimo elemento messo in pila)
+- Allocazione in memoria
+- Stato dei file aperti
+
+Ogni record della tabella prende il nome di PCB (Process Control Block)
+
+Lo scheduler si trova al livello più basso del sistema operativo, si occupa della gestione di avvio e chiusura dei processi e di eventuali interrupt.
+Le transazioni di ready e blocked vengono infatti causate dallo scheduler suo compito è capire quando un processo deve essere mandato in esecuzione e per quanto tempo.
+
+--- Gestione degli interruput ---
+
+Ad ogni classe di dispositivi I/O viene associata una locazione chiamata vettore delle interruzioni (interrupt vector) che contiene l'indirizzo della procedura di gestione delle interruzioni di seguito riportata:
+
+1. Salvataggio dello stack del PC e del PSW nello stack attuale;
+2. Caricamento dal vettore degli interrupt l'indirizzo della procedura associata;
+3. Salvataggio registri e impostazione di un nuovo stack;
+4. Esecuzione procedura di servizio per l'interrupt;
+5. Interrogazione dello scheduler per sapere con quale processo proseguire;
+6. Ripristino dal PCB dello stato di tale processo (registri, mappa memoria);
+7. Ripresa del processo corrente.
+
+
+--- I Thread ---
+
+I Thread, sono definiti come mini-processi.
+Scomporre i processi in tanti piccoli sottoprocessi permette la loro esecuzione in modo parallelo.
+
+Ogni Thread è caratterizzato da:
+- Program Counter, tiene traccia della prossima istruzione da eseguire
+- Registri
+- Stack, ogni thread ne ha uno
+- Nessuna protezione della memoria: Un thread può leggere, scrivere o cancellare lo stack di un altro thread
+
+MultiThreading: Ad ogni processo sono associati più thread.
+
+N.B: Nei sistemi single-core si parla sempre di pseudoparallelismo,  nei sistemi multi-core abbiamo invece il parallelismo puro.
+
+--- Thread vs Processo ---
+
+Ogni processo lavora in spazi degli indirizzi diversi
+Tutti i thread condividono lo stesso spazio degli indirizzi
+
+--- Stati di un Thread ---
+
+Ready: Pronto per essere eseguito
+Running: In esecuzione
+Blocked: Bloccato
+
+Un Thread in Running può entrare in stato di Ready o Blocked
+Un Thread in Ready può entrare in stato di Running
+Un thread in Bloced può entrare in stato di Ready
+
+--- Operazioni sui Thread ---
+
+•thread_create: un thread ne crea un altro;
+•thread_exit: il thread chiamante termina;
+•thread_join: un thread si sincronizza con la fine di un altro thread;
+•thread_yield: il thread chiamante rilascia volontariamente la CPU
+
+--- Programmazione Multi-Core ---
+
+• Separazione dei task
+	Trovare aree per attività separate e simultanee
+• Bilanciamento
+	Assicurarsi che eseguano lo stesso lavoro di uguale valore
+• Suddivisione dei dati
+	Dividere i dati per essere eseguiti su core separati
+• Dipendenze dei dati
+	Esecuzione delle attività sincronizzata
+• Test e debugging
+
+--- Thread a Livello Utente (1 a molti) ---
+
+Il kernel in questa modalità non sa nulla sui thread, gestirà processi ordinari ad un solo thread.
+Quando i thread sono gestiti in modalità utente ogni processo ha la propria tabella dei thread per tenere traccia dei propri thread.
+
+Vantaggi:
+Permettono ad un processo di avere il proprio algoritmo di schedulazione
+Scalabilità.
+
+Svantaggi:
+I thread a livello kernel a differenza di quelli utente, richiedono spazio per le tabelle e per lo stack nel kernel.
+Chiamate bloccanti e possibilità di non rilascio della CPU
+
+--- Thread a Livello Kernel (1 a 1)
+
+In questa modalità il kernel conosce e gestisce i thread, ha una tabella che tiene traccia di tutti i thread di sistema.
+
+Quando un thread desidera creare un nuovo thread esegue una chiamata di sistema che effettua la creazione aggiornando la tabella dei thread del kernel.
+
+Il loro principale svantaggio è il costo di una chiamata di sistema, specie se si hanno molte operazioni come creazione, terminazione, etc...
+
+--- Implementazione ibrida (Molti a Molti) ---
+
+In questo modello il kernel si occupa solo dei thread a livello kernel e schedula solo questi ultimi.
+Ogni thread kernel viene usato a turno da uno o più thread utente.
+
+L'assegnazione è decisa dal programmatore.
+
