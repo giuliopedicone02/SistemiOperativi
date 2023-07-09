@@ -29,6 +29,8 @@ Tutte le strutture dati utilizzate dovranno essere ripulite correttamente all'us
 gcc pari-dispari.c -o pari-dispari -pthread
 ./pari-dispari 5000
 
+# In alternativa: bash start.sh
+
 [C] Generato il numero: 71
 [D] Incrementato il contatore dei numeri dispari
 [C] Generato il numero: 22

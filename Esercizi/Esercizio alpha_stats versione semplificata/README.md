@@ -28,6 +28,8 @@ Tutte le strutture dati utilizzate dovranno essere ripulite correttamente all'us
 gcc alpha-stats.c -o alpha-stats -pthread
 ./alpha-stats 5000
 
+# In alternativa: bash start.sh
+
 [C] Ho generato la lettera: l
 [AL] Ho incrementato il contatore della lettera: l
 [C] Ho generato la lettera: w
