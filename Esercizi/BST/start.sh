@@ -1,0 +1,1 @@
+(gcc binary-search-tree.c -o bst -pthread) && (./bst args/bst_a.txt args/bst_b.txt)
