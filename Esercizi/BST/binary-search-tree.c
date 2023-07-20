@@ -10,67 +10,68 @@
 
 typedef enum
 {
-    BST_THREAD,
-    PADRE
-} n_thread;
-
-typedef enum
-{
-    OPERAZIONE,
-    BST_REF,
-    VALORE
-} op_spec;
+    INSERIMENTO,
+    RICERCA,
+    STAMPA
+} operazione;
 
 typedef struct
 {
-    char operazione[50];
+    operazione operazione;
+    int numeroBST;
+    int valore;
     bool done;
-    sem_t sem[2]; // 0: Thread_n, 1: Thread padre
+    sem_t *sem;
 } shared;
 
 typedef struct
 {
     pthread_t tid;
     int t_names;
+    int n_thread;
     char *filename;
     shared *shared;
 } thread_data;
 
-void init_shared(shared *sh)
+void init_shared(shared *sh, int numeroThread)
 {
     int err;
 
-    memset(sh->operazione, 0, sizeof(sh->operazione));
+    sh->operazione = -1;
+    sh->numeroBST = -1;
+    sh->valore = -1;
     sh->done = 0;
 
-    if ((err = sem_init(&sh->sem[BST_THREAD], 0, 0)) != 0) // Semaforo per i BST-Thread
+    for (int i = 0; i < numeroThread; i++)
     {
-        exit_with_err("sem_init", err);
+        if ((err = sem_init(&sh->sem[i], 0, 0)) != 0) // Semafori per i BST-Thread
+        {
+            exit_with_err("sem_init", err);
+        }
     }
 
-    if ((err = sem_init(&sh->sem[PADRE], 0, 1)) != 0) // Semaforo per il Thread Padre
+    if ((err = sem_init(&sh->sem[numeroThread], 0, 1)) != 0) // Semaforo per il Thread Padre
     {
         exit_with_err("sem_init", err);
     }
 }
 
-void destroy_shared(shared *sh)
+void destroy_shared(shared *sh, int numeroThread)
 {
     int err;
-    if ((err = sem_destroy(&sh->sem[BST_THREAD])) != 0)
-    {
-        exit_with_err("sem_destroy", err);
-    }
 
-    if ((err = sem_destroy(&sh->sem[PADRE])) != 0)
+    for (int i = 0; i < numeroThread + 1; i++)
     {
-        exit_with_err("sem_destroy", err);
+        if ((err = sem_destroy(&sh->sem[i])) != 0)
+        {
+            exit_with_err("sem_destroy", err);
+        }
     }
 
     free(sh);
 }
 
-void *bst_thread(void *arg)
+void bst_thread(void *arg)
 {
     int err;
     thread_data *sh = (thread_data *)arg;
@@ -94,7 +95,7 @@ void *bst_thread(void *arg)
 
     while (1)
     {
-        if ((err = sem_wait(&sh->shared->sem[BST_THREAD])) != 0)
+        if ((err = sem_wait(&sh->shared->sem[sh->t_names])) != 0)
         {
             exit_with_err("sem_wait", err);
         }
@@ -104,40 +105,37 @@ void *bst_thread(void *arg)
             break;
         }
 
-        char *token = strtok(sh->shared->operazione, " ");
-
-        char operazione[3][10];
-        int i = 0;
-
-        while (token != NULL)
+        if (sh->shared->operazione == INSERIMENTO)
         {
-            strcpy(operazione[i++], token);
-            token = strtok(NULL, " ");
+            printf("\nHo inserito il valore %d nel BST %d\n", sh->shared->valore, sh->shared->numeroBST);
+            insertNode(bst, sh->shared->valore);
         }
-
-        if (strcmp(operazione[OPERAZIONE], "add") == 0)
+        else if (sh->shared->operazione == RICERCA)
         {
-            printf("Aggiunta del numero: %s\n", operazione[VALORE]);
-            insertNode(bst, atoi(operazione[VALORE]));
+            printf("\nRicerca del valore %d nel BST %d in corso...\n", sh->shared->valore, sh->shared->numeroBST);
+            if (search(bst, sh->shared->valore) == NULL)
+            {
+                printf("NON ho trovato il valore %d\n", sh->shared->valore);
+            }
+            else
+            {
+                printf("Ho trovato il valore %d\n", sh->shared->valore);
+            }
         }
-        else if (strcmp(operazione[OPERAZIONE], "search") == 0)
+        else if (sh->shared->operazione == STAMPA)
         {
-            printf("Ricerca del numero: %s\n", operazione[VALORE]);
-        }
-        else if (strcmp(operazione[OPERAZIONE], "print") == 0)
-        {
-            printf("Stampa del BST: ");
+            printf("\nStampa del BST %d: ", sh->shared->numeroBST);
             printInorder(bst);
             printf("\n");
         }
         else
         {
-            printf("Operazione non consentita!\n");
+            printf("\nOperazione non consentita\n");
         }
 
         sleep(3);
 
-        if ((err = sem_post(&sh->shared->sem[PADRE])) != 0)
+        if ((err = sem_post(&sh->shared->sem[sh->n_thread])) != 0)
         {
             exit_with_err("sem_post", err);
         }
@@ -146,19 +144,19 @@ void *bst_thread(void *arg)
     pthread_exit(NULL);
 }
 
-void *padre(void *arg)
+void padre(void *arg)
 {
     int err;
     thread_data *sh = (thread_data *)arg;
 
     while (1)
     {
-        if ((err = sem_wait(&sh->shared->sem[PADRE])) != 0)
+        if ((err = sem_wait(&sh->shared->sem[sh->n_thread])) != 0)
         {
             exit_with_err("sem_wait", err);
         }
 
-        printf("Inserisci una delle seguenti operazioni: \n");
+        printf("\nInserisci una delle seguenti operazioni: \n");
         printf("- add n key\n");
         printf("- search n key\n");
         printf("- print n\n");
@@ -175,9 +173,39 @@ void *padre(void *arg)
             exit(EXIT_SUCCESS);
         }
 
-        strcpy(sh->shared->operazione, operazione);
+        char *token = strtok(operazione, " ");
 
-        if ((err = sem_post(&sh->shared->sem[BST_THREAD])) != 0)
+        char op[3][10];
+        int i = 0;
+
+        while (token != NULL)
+        {
+            strcpy(op[i++], token);
+            token = strtok(NULL, " ");
+        }
+
+        sh->shared->numeroBST = atoi(op[1]);
+
+        if (strcmp(op[0], "add") == 0)
+        {
+            sh->shared->operazione = INSERIMENTO;
+            sh->shared->valore = atoi(op[2]);
+        }
+        else if (strcmp(op[0], "search") == 0)
+        {
+            sh->shared->operazione = RICERCA;
+            sh->shared->valore = atoi(op[2]);
+        }
+        else if (strcmp(op[0], "print") == 0)
+        {
+            sh->shared->operazione = STAMPA;
+        }
+        else
+        {
+            sh->shared->operazione = -1;
+        }
+
+        if ((err = sem_post(&sh->shared->sem[sh->shared->numeroBST])) != 0)
         {
             exit_with_err("sem_post", err);
         }
@@ -197,16 +225,19 @@ int main(int argc, char **argv)
     int numeroBST = argc - 1;
     int err;
 
-    thread_data td[numeroBST + 1];
     shared *sh = malloc(sizeof(shared));
+    sh->sem = (sem_t *)malloc(argc * sizeof(sem_t));
 
-    init_shared(sh);
+    thread_data td[numeroBST + 1];
+
+    init_shared(sh, numeroBST);
 
     // Creazione degli n-thread generici
     for (int i = 0; i < numeroBST; i++)
     {
-        td[i].t_names = i + 1;
+        td[i].t_names = i;
         td[i].filename = argv[i + 1];
+        td[i].n_thread = numeroBST;
         td[i].shared = sh;
 
         if ((err = pthread_create(&td[i].tid, NULL, (void *)bst_thread, (void *)&td[i])) != 0)
@@ -218,7 +249,9 @@ int main(int argc, char **argv)
     // printf("Ho creato %d thread BST\n", numeroBST);
 
     // Creazione del thread padre
+    td[numeroBST].t_names = numeroBST;
     td[numeroBST].shared = sh;
+    td[numeroBST].n_thread = numeroBST;
     if ((err = pthread_create(&td[numeroBST].tid, NULL, (void *)padre, (void *)&td[numeroBST])) != 0)
     {
         exit_with_err("pthread_create", err);
@@ -232,6 +265,6 @@ int main(int argc, char **argv)
         }
     }
 
-    destroy_shared(sh);
+    destroy_shared(sh, numeroBST);
     exit(EXIT_SUCCESS);
 }

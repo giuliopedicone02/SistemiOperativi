@@ -40,6 +40,22 @@ BST *insertNode(BST *root, int data)
     return root;
 }
 
+BST *search(BST *root, int data)
+{
+    if (root == NULL || root->data == data)
+    {
+        return root;
+    }
+    else if (data > root->data)
+    {
+        return search(root->right, data);
+    }
+    else
+    {
+        return search(root->left, data);
+    }
+}
+
 // Funzione di utilità per stampare l'albero in ordine crescente
 void printInorder(BST *node)
 {
