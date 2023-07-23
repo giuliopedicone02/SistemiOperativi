@@ -6,11 +6,11 @@ Creare un programma **calculator.c** in linguaggio C che accetti invocazioni sul
 calculator <list.txt>
 ```
 
-Il programma dovrà fondamentalmente leggere una sequenza di operazioni numericheda eseguire in sequenza a partire da un valore iniziale nullo (0) e presentare il risultato finale. Ogni riga del file contiene l'operatore da applicare (tra somma, moltiplicazione esottrazione) e il secondo operando (tipo  +2,  *10,  -9, ...). Il primo operando è sempre il valore dell'operazione precedente.
+Il programma dovrà fondamentalmente leggere una sequenza di operazioni numeriche da eseguire in sequenza a partire da un valore iniziale nullo (0) e presentare il risultato finale. Ogni riga del file contiene l'operatore da applicare (tra somma, moltiplicazione e sottrazione) e il secondo operando (tipo  +2,  *10,  -9, ...). Il primo operando è sempre il valore dell'operazione precedente.
 
 Per coordinarsi, i thread dovranno usare un certo numero di semafori (minimo a scelta dello studente).
 
-Il thread **MNG**, coordinerà tutto il calcolo: leggerà riga-per-riga la lista e per ognioperazione passerà il risultato parziale (partenzo da 0) e l'operando appena letto al processo associato all'operazione attuale (+, * o  -); 
+Il thread **MNG**, coordinerà tutto il calcolo: leggerà riga-per-riga la lista e per ogni operazione passerà il risultato parziale (partenzo da 0) e l'operando appena letto al processo associato all'operazione attuale (+, * o  -); 
 
 Il thread **ADD**, **MUL** e **SUB**, una volta attivati applicheranno la propria operazione ai   due   operandi   presenti   nel   segmento   condiviso,   depositando   nello   stesso   il risultato..
 
