@@ -3,7 +3,7 @@
 Creare un programma **sort-list.c** in linguaggio C che accetti invocazioni sulla riga di comando del tipo:
 
 ```bash
-calculator <file.txt>
+sort-list <file.txt>
 ```
 
 Il programma deve sostanzialmente leggere il file di testo specificato, contenente una 
