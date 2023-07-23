@@ -1,0 +1,1 @@
+(gcc calculator.c -o calculator -pthread) && (./calculator list-1.txt)
