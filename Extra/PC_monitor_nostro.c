@@ -87,16 +87,36 @@ void shared_main_destroy(Shared_main *sh)
     free(sh);
 }
 
+void inserisciElemento(char *word, Thread *th)
+{
+    if (pthread_mutex_lock(&th->sh_prod->lock))
+        handle("lock");
+    while (th->sh_prod->size == N)
+        if (pthread_cond_wait(&th->sh_prod->full, &th->sh_prod->lock))
+            handle("wait");
+
+    printf("[Producer-%d] %s\n", th->ID, word);
+    strcpy(th->sh_prod->buffer[th->sh_prod->in], word);
+    th->sh_prod->in = (th->sh_prod->in + 1) % N;
+    th->sh_prod->size++;
+
+    if (th->sh_prod->size == 1)
+        if (pthread_cond_signal(&th->sh_prod->empty))
+            handle("signal");
+    if (pthread_mutex_unlock(&th->sh_prod->lock))
+        handle("unlock");
+}
+
 void Producer(void *arg)
 {
     Thread *th = (Thread *)arg;
     FILE *fp;
-    char line[BUFSIZ], *word;
+    char line[LEN], *word;
 
     if (!(fp = fopen(th->file, "r")))
         handle("fopen");
 
-    while (fgets(line, BUFSIZ, fp))
+    while (fgets(line, LEN, fp))
     {
         if (line[strlen(line) - 1] == '\n')
         {
@@ -106,27 +126,12 @@ void Producer(void *arg)
         word = strtok(line, " ");
         while (word)
         {
-            if (pthread_mutex_lock(&th->sh_prod->lock))
-                handle("lock");
-            while (th->sh_prod->size == N)
-                if (pthread_cond_wait(&th->sh_prod->full, &th->sh_prod->lock))
-                    handle("wait");
-
-            printf("[Producer-%d] %s\n", th->ID, word);
-            strcpy(th->sh_prod->buffer[th->sh_prod->in], word);
-            th->sh_prod->in = (th->sh_prod->in + 1) % N;
-            th->sh_prod->size++;
-
+            inserisciElemento(word, th);
             word = strtok(NULL, " ");
-
-            if (pthread_cond_signal(&th->sh_prod->empty))
-                handle("signal");
-            if (pthread_mutex_unlock(&th->sh_prod->lock))
-                handle("unlock");
         }
     }
 
-    if (pthread_mutex_lock(&th->sh_prod->lock))
+    /*if (pthread_mutex_lock(&th->sh_prod->lock))
         handle("lock");
     while (th->sh_prod->size == N)
         if (pthread_cond_wait(&th->sh_prod->full, &th->sh_prod->lock))
@@ -138,17 +143,16 @@ void Producer(void *arg)
         handle("signal");
     if (pthread_mutex_unlock(&th->sh_prod->lock))
         handle("unlock");
-
+*/
     pthread_exit(NULL);
 }
 
 void stampaStringa(char *word, Thread *th)
 {
-
+    // printf("Ok\n");
     if (pthread_mutex_lock(&th->sh_main->lock))
         handle("lock");
 
-    printf("Ok\n");
     while (th->sh_main->turn != 0)
         if (pthread_cond_wait(&th->sh_main->consumer, &th->sh_main->lock))
             handle("wait");
@@ -162,40 +166,50 @@ void stampaStringa(char *word, Thread *th)
         handle("unlock");
 }
 
-void Consumer(void *arg)
+void estraiElemento(Thread *th)
 {
-    Thread *th = (Thread *)arg;
-    char word[BUFSIZ];
-    while (true)
+    char word[LEN];
+
+    if (pthread_mutex_lock(&th->sh_prod->lock))
+        handle("lock");
+    while (th->sh_prod->size == 0)
+        if (pthread_cond_wait(&th->sh_prod->empty, &th->sh_prod->lock))
+            handle("wait");
+
+    /*if (th->sh_prod->finish == th->sh_prod->n_producer && th->sh_prod->size == 0)
     {
-        if (pthread_mutex_lock(&th->sh_prod->lock))
-            handle("lock");
-        while (th->sh_prod->size == 0)
-            if (pthread_cond_wait(&th->sh_prod->empty, &th->sh_prod->lock))
-                handle("wait");
-
-        if (th->sh_prod->finish == th->sh_prod->n_producer && th->sh_prod->size == 0)
-        {
-            if (pthread_cond_signal(&th->sh_main->main))
-                handle("signal");
-            if (pthread_mutex_unlock(&th->sh_prod->lock))
-                handle("unlock");
-            break;
-        }
-
-        strcpy(word, th->sh_prod->buffer[th->sh_prod->out]);
-        th->sh_prod->out = (th->sh_prod->out + 1) % N;
-        th->sh_prod->size--;
-
-        printf("[CONSUMER] parola letta : %s\n", word);
-
-        if (pthread_cond_signal(&th->sh_prod->full))
+        if (pthread_cond_signal(&th->sh_main->main))
             handle("signal");
         if (pthread_mutex_unlock(&th->sh_prod->lock))
             handle("unlock");
+        break;
+    }*/
 
-        stampaStringa(word, th);
+    strcpy(word, th->sh_prod->buffer[th->sh_prod->out]);
+    th->sh_prod->out = (th->sh_prod->out + 1) % N;
+    th->sh_prod->size--;
+
+    printf("[CONSUMER] parola letta : %s\n", word);
+
+    if (th->sh_prod->size == N - 1)
+        if (pthread_cond_signal(&th->sh_prod->full))
+            handle("signal");
+    if (pthread_mutex_unlock(&th->sh_prod->lock))
+        handle("unlock");
+
+    stampaStringa(word, th);
+}
+
+void Consumer(void *arg)
+{
+    Thread *th = (Thread *)arg;
+    char *word;
+
+    while (true)
+    {
+        estraiElemento(th);
     }
+
     pthread_exit(NULL);
 }
 
@@ -223,6 +237,7 @@ int main(int argc, char *argv[])
 
     // Consumer
     th[n_producer].sh_prod = sh_prod;
+    th[n_producer].sh_main = sh_main;
     if (pthread_create(&th[n_producer].tid, NULL, (void *)Consumer, (void *)&th[n_producer]))
         handle("create");
 
