@@ -135,12 +135,13 @@ void print_list(lista *l)
     node *ptr = l->head;
 
     printf("Lista: ");
-    while (ptr)
+    while (ptr->next)
     {
-        printf("%d ", ptr->val);
+        printf("%d, ", ptr->val);
         ptr = ptr->next;
     }
-    printf("\n");
+
+    printf("%d\n", ptr->val);
 }
 
 void list_destroy(lista *l)
@@ -172,17 +173,17 @@ int main()
     insert_list(l, 8);
 
     print_list(l);
-    printf("Dimensione della lista: %d\n", getSize(l));
+    printf("Dimensione della lista: %d\n\n", getSize(l));
 
     int cerca = 8;
 
     if (listSearch(l, cerca))
     {
-        printf("Valore %d trovato\n", cerca);
+        printf("Valore %d trovato\n\n", cerca);
     }
     else
     {
-        printf("Valore %d non trovato\n", cerca);
+        printf("Valore %d non trovato\n\n", cerca);
     }
 
     printf("Rimozione valore 12...\n");
@@ -190,7 +191,7 @@ int main()
     remove_list(l, 12);
 
     print_list(l);
-    printf("Dimensione della lista: %d\n", getSize(l));
+    printf("Dimensione della lista: %d\n\n", getSize(l));
 
     sommaElementi(l);
 
