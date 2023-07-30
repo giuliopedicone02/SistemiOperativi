@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 typedef struct _node_
 {
@@ -162,15 +163,14 @@ void list_destroy(lista *l)
 int main()
 {
     lista *l = malloc(sizeof(lista));
+    srand(time(NULL));
 
     init_list(l);
 
-    insert_list(l, 10);
-    insert_list(l, 12);
-    insert_list(l, 1);
-    insert_list(l, 7);
-    insert_list(l, 3);
-    insert_list(l, 8);
+    for (int i = 0; i < 10; i++)
+    {
+        insert_list(l, rand() % 10 + 1);
+    }
 
     print_list(l);
     printf("Dimensione della lista: %d\n\n", getSize(l));
@@ -179,19 +179,19 @@ int main()
 
     if (listSearch(l, cerca))
     {
-        printf("Valore %d trovato\n\n", cerca);
+        printf("Valore %d trovato\n", cerca);
+
+        printf("Rimozione valore %d...\n", cerca);
+
+        remove_list(l, cerca);
+
+        print_list(l);
+        printf("Dimensione della lista: %d\n\n", getSize(l));
     }
     else
     {
         printf("Valore %d non trovato\n\n", cerca);
     }
-
-    printf("Rimozione valore 12...\n");
-
-    remove_list(l, 12);
-
-    print_list(l);
-    printf("Dimensione della lista: %d\n\n", getSize(l));
 
     sommaElementi(l);
 
